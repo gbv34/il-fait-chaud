@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Il fait chaud — villes supportables aujourd'hui et en 2050</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,620&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="./styles.css?v=cands1" />
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="busy" id="busy" hidden>Mise à jour de la carte…</div>
+
+    <header class="topbar">
+      <h1>Il fait chaud</h1>
+      <p class="brand-kicker" id="brand-kicker">Observé · été 2026</p>
+      <p class="sr-only" id="brand-sub">
+        Où les températures ont été les plus stables et supportables
+      </p>
+      <div class="sel-chip" id="sel-chip" hidden>
+        <span id="sel-chip-name"></span>
+        <button type="button" class="sel-chip-clear" id="sel-chip-clear" aria-label="Effacer la sélection">
+          ×
+        </button>
+      </div>
+      <div class="topbar-actions">
+        <div class="seg" role="group" aria-label="Horizon temporel">
+          <button type="button" class="seg-btn is-on" id="horizon-now" data-horizon="now">
+            Aujourd'hui
+          </button>
+          <button type="button" class="seg-btn" id="horizon-2050" data-horizon="2050">
+            2050
+          </button>
+        </div>
+        <button type="button" class="ghost-btn" id="lexicon-toggle">Lexique</button>
+        <button type="button" class="ghost-btn drawer-edge" id="drawer-open" hidden>
+          Liste et filtres
+        </button>
+      </div>
+    </header>
+
+    <div class="lexicon" id="lexicon" hidden>
+      <p>
+        <strong>Aujourd’hui</strong> affiche des <em>mesures</em> Météo-France
+        de l’été en cours : températures, jours ≥ 30&nbsp;°C, nuits
+        tropicales. Ce n’est pas une projection.
+      </p>
+      <p>
+        <strong>2050</strong> est une projection climatique, pas le temps
+        qu’il fera un jour donné.
+        <strong>Moyenne n’est pas le pic, et le pic n’est pas le bloc.</strong>
+        « Max d’été » = moyenne des maximums journaliers sur ~20 étés,
+        maille 8&nbsp;km — pas l’après-midi le plus chaud.
+        Deux étés à même moyenne peuvent n’avoir rien à voir :
+        20 jours d’extrêmes jour et nuit d’affilée, ou des journées
+        plus chaudes mais sans bloc. Le confort se lit sur
+        <strong>les extrêmes et leur continuité</strong>, pas sur la moyenne.
+        2026 à Moules : 43&nbsp;°C, 19 jours d’affilée ≥ 35&nbsp;°C
+        (62 jours ≥ 35&nbsp;°C au cumul).
+        Un été caniculaire en 2050 serait plus dur que 2026
+        (pic plutôt 46–48&nbsp;°C, séries au moins aussi longues), pas plus frais.
+        DRIAS ne calcule ni le pic ni les séries : les 12 jours ≥ 35&nbsp;°C
+        en climat 2050, c’est un cumul moyen, pas un bloc caniculaire.
+      </p>
+      <p>
+        <strong>DRIAS</strong> est le portail officiel des projections
+        climatiques pour la France. Ici : jalon
+        <strong>TRACC +2,7&nbsp;°C</strong>, médiane de plusieurs modèles.
+      </p>
+      <p>
+        <strong>IFM</strong> (indice forêt météo) mesure le danger de feu :
+        chaleur, vent, sécheresse de la végétation. Un jour « IFM élevé »
+        n’est pas un incendie, c’est un jour où un départ de feu est plus
+        probable.
+      </p>
+      <p>
+        <strong>Max du jour</strong> (Tx en météo) : la température la plus
+        haute de la journée.
+        <strong>Min du jour</strong> (Tn) : la plus basse, souvent la nuit.
+        Une <strong>nuit tropicale</strong> a un minimum ≥ 20&nbsp;°C.
+        <strong>Été</strong> = juin–juillet–août.
+      </p>
+      <p>
+        Allemagne, Suisse, Espagne et Italie : projection
+        <strong>CMIP6</strong> (2046–2050), maille ~20&nbsp;km, pas DRIAS.
+        Utile pour comparer, pas au degré près.
+      </p>
+      <p>
+        En 2050, le fond coloré est le
+        <strong>territoire</strong> : maille DRIAS de 8&nbsp;km en France,
+        maille CMIP6 d’environ 20&nbsp;km hors de France. À l’affichage, les
+        couleurs sont <strong>lissées</strong> entre mailles voisines
+        (ce n’est pas une maille plus fine). Pas un poste.
+        Deux lectures de l’été.
+        <strong>Confortable</strong> : au plus 14&nbsp;jours ≥&nbsp;30&nbsp;°C,
+        8 nuits tropicales, max d’été 24&nbsp;°C →
+        <strong>vert vif</strong>.
+        <strong>Encore tenable</strong> : jusqu’à 22&nbsp;jours, 15 nuits,
+        26&nbsp;°C → <strong>vert fade</strong>
+        (même couleur si un autre critère ville manque).
+        Au-delà, mais avant l’extrême → <strong>rouge</strong>
+        (été trop dur : Grenoble-centre).
+        <strong>Noir</strong> = invivable :
+        ≥ 40 jours ≥ 30&nbsp;°C, ou 28 nuits tropicales, ou 29&nbsp;°C de max d’été
+        (Ganges, Béziers, Nîmes, Avignon — tout le pourtour méditerranéen).
+        En 2050, les pastilles sont des
+        <strong>aires d’attraction INSEE</strong> (≥ 50 000 hab.) :
+        climat du pôle, pas des massifs.
+        Case <strong>Ville</strong> : pôle ≥ 35 000 hab.
+        (écarte les préfectures trop petites).
+        Campus = visite du fils, rayon 45 km.
+        La <strong>chaleur ressentie</strong> entre aussi dans le
+        score : un été humide pèse plus qu’un été sec à température égale.
+        <strong>Grenoble-centre</strong> et <strong>Lyon-centre</strong> sont hors shortlist (cuvette, PM d’hiver).
+        Ce n’est qu’un exemple de lecture : on n’évalue pas la ville en fond de vallée,
+        on évalue les villages habités à 800–1 500&nbsp;m qui s’en servent comme pôle
+        (20–40 min) — pas un chalet isolé.
+        Même schéma autour d’Annecy, Chambéry, Clermont-Ferrand, Saint-Étienne,
+        Besançon (premier plateau), Belfort / Montbéliard (plateau de Maîche,
+        pas le Ballon d’Alsace).
+        Autour d’<strong>Alès</strong> (Lasalle, La Grand-Combe) : pas d’équivalent
+        — les Cévennes gardoises logent dans les vallées ;
+        à 800&nbsp;m on est à plus d’une heure, isolé.
+        Les <strong>losanges</strong> n’apparaissent qu’en zoomant un bassin
+        (pas à l’échelle de la France) : ce ne sont pas des villes.
+      </p>
+      <p>
+        <strong>Air</strong> : modèle CAMS (~11&nbsp;km), pas une station ATMO.
+        Hiver = particules et NO2 des cuvettes (Lyon, Grenoble, Alsace).
+        Été = ozone photochimique (couloir rhodanien, Midi, Paris).
+        L’ozone empirera avec les étés 2050 ; le chiffre est l’air
+        2025–2026. Une vallée étroite peut être pire que la maille.
+      </p>
+      <p>
+        <strong>Chaleur ressentie</strong> : ce que le corps sent quand l’air
+        est à la fois chaud et humide (indice humidex : max du jour + humidité).
+        En 2050, l’humidité est estimée à partir des nuits tropicales
+        (DRIAS ne la fournit pas). Aujourd’hui, on la calcule avec le max et
+        le min du jour. Confortable ≤ 29, encore tenable ≤ 34.
+      </p>
+    </div>
+
+    <aside class="drawer" id="drawer" aria-label="Liste, légende et filtres">
+      <div class="drawer-head">
+        <p class="drawer-kicker">Carte</p>
+        <button type="button" class="ghost-btn" id="drawer-close" aria-label="Replier le panneau">
+          Replier
+        </button>
+      </div>
+
+      <div class="city-list" id="city-list" hidden>
+        <div class="city-list-top">
+          <p class="legend-title" id="city-list-title">Candidats</p>
+          <label class="sort-field">
+            <span class="sr-only">Trier</span>
+            <select id="city-sort">
+              <option value="score" selected>Par indice</option>
+              <option value="alpha">A → Z</option>
+              <option value="dist">Distance (Ganges)</option>
+            </select>
+          </label>
+        </div>
+        <p class="city-list-hint" id="city-list-hint" hidden>
+          Pastilles masquées. Clique une ville pour en poser une, ou coche
+          «&nbsp;Stations sur la carte&nbsp;».
+        </p>
+        <input
+          type="search"
+          id="city-search"
+          class="city-search"
+          placeholder="Rechercher une ville…"
+          autocomplete="off"
+        />
+        <ol id="city-list-items"></ol>
+      </div>
+
+      <aside class="legend" aria-label="Échelle de confort">
+        <p class="legend-title" id="legend-title">Confort relatif à la période</p>
+        <div class="legend-bar"></div>
+        <div class="legend-labels">
+          <span id="legend-low">Supportable</span>
+          <span id="legend-high">Éprouvant</span>
+        </div>
+        <div class="legend-bands" role="group" aria-label="Couleur des pastilles">
+          <label><input type="checkbox" data-band="green" checked /> <span class="band-dot band-green"></span> <span data-band-label="green">Vert · 1er quart</span></label>
+          <label><input type="checkbox" data-band="yellow" checked /> <span class="band-dot band-yellow"></span> <span data-band-label="yellow">Jaune · 2e quart</span></label>
+          <label class="orange-band-row"><input type="checkbox" data-band="orange" checked /> <span class="band-dot band-orange"></span> <span data-band-label="orange">Orange · 3e quart</span></label>
+          <label class="near-band-row"><input type="checkbox" data-band="near" checked /> <span class="band-dot band-near"></span> <span data-band-label="near" title="Juste au-dessus des seuils (Annecy, Dijon…) : 2 à 4 jours de trop, distinct du rouge.">Presque · 2–4 j de trop</span></label>
+          <label><input type="checkbox" data-band="red" checked /> <span class="band-dot band-red"></span> <span data-band-label="red">Rouge · 4e quart</span></label>
+          <label class="black-band-row"><input type="checkbox" data-band="black" checked /> <span class="band-dot band-black"></span> <span data-band-label="black" title="Invivable : ≥ 40 j ≥ 30 °C, ou 28 nuits tropicales, ou 29 °C de max d’été. Ganges, Béziers, Nîmes, Avignon, pourtour méditerranéen — pas Grenoble.">Noir · invivable</span></label>
+        </div>
+        <p class="legend-water" id="legend-band-help" hidden>
+          Parmi les villes affichées, pas un verdict vivable / invivable.
+        </p>
+        <p class="legend-water" id="legend-water" hidden></p>
+        <p class="legend-home"><span class="home-star-mini" aria-hidden="true">★</span> Étoile · Ganges (chez moi)</p>
+        <p class="legend-home legend-massif" id="legend-massif" hidden>
+          <span class="massif-mini" aria-hidden="true"></span> Losanges · villages d’altitude
+        </p>
+      </aside>
+
+      <aside class="criteria" id="criteria" aria-label="Critères de sélection">
+        <p class="legend-title">Filtres</p>
+        <div class="eq" id="equation">
+          <div class="eq-pills">
+            <span class="pill">Été tenable</span>
+            <span class="eq-op">+</span>
+            <span class="pill">Ville ≥ 35k</span>
+            <span class="eq-op">+</span>
+            <span class="pill">Campus &lt; 45 km</span>
+            <button
+              type="button"
+              class="tip-btn"
+              id="eq-tip-btn"
+              aria-expanded="false"
+              aria-controls="criteria-help"
+              title="Détail de l’équation"
+            >
+              i
+            </button>
+          </div>
+          <p class="tip" id="criteria-help" hidden>
+            Mesures de l’été en cours : températures, jours ≥ 30 °C, nuits
+            tropicales. Ce n’est pas une projection.
+          </p>
+        </div>
+        <fieldset class="countries" id="acc-countries">
+          <legend>Pays <span class="acc-count" id="count-countries"></span></legend>
+          <label><input type="checkbox" data-country="FR" checked /> France</label>
+          <label><input type="checkbox" data-country="DE" /> Allemagne</label>
+          <label><input type="checkbox" data-country="CH" /> Suisse</label>
+          <label><input type="checkbox" data-country="ES" /> Espagne</label>
+          <label><input type="checkbox" data-country="IT" /> Italie</label>
+        </fieldset>
+        <details class="acc" open>
+          <summary>Climat et risques <span class="acc-count" id="count-climate"></span></summary>
+          <fieldset>
+            <legend class="sr-only">Climat et risques</legend>
+            <label><input type="checkbox" data-crit="heat" checked /> <span id="crit-heat-label">Été supportable (mesures)</span></label>
+            <label><input type="checkbox" data-crit="fire" checked /> <span id="crit-fire-label">Peu de feu (risques officiels)</span></label>
+            <label class="crit-2050-only"><input type="checkbox" data-crit="dry" checked /> Sols pas trop secs</label>
+            <label><input type="checkbox" data-crit="coast" checked /> Hors littoral</label>
+            <label><input type="checkbox" data-crit="nuke" checked /> Hors nucléaire</label>
+            <label><input type="checkbox" data-crit="local" checked /> Risques locaux faibles</label>
+            <label><input type="checkbox" data-crit="air" checked /> Air respirable (PM, ozone)</label>
+          </fieldset>
+        </details>
+        <details class="acc">
+          <summary>Commodités <span class="acc-count" id="count-amenity"></span></summary>
+          <fieldset>
+            <legend class="sr-only">Commodités</legend>
+            <label><input type="checkbox" data-crit="hospital" checked /> Hôpital &lt; 30 km</label>
+            <label><input type="checkbox" data-crit="university" checked /> Campus (fils) &lt; 45 km</label>
+            <label><input type="checkbox" data-crit="culture" checked /> Culture &lt; 30 km</label>
+            <label><input type="checkbox" data-crit="infra" checked /> Gare &lt; 30 km</label>
+          </fieldset>
+        </details>
+        <button type="button" class="reset-btn" id="reset-filters">Réinitialiser les filtres</button>
+      </aside>
+    </aside>
+
+    <section class="detail" id="detail" hidden>
+      <button type="button" class="detail-close" id="detail-close" aria-label="Fermer">
+        ×
+      </button>
+      <p class="detail-region" id="detail-region"></p>
+      <h2 id="detail-name"></h2>
+      <p class="detail-meta" id="detail-meta"></p>
+      <dl class="detail-stats">
+        <div><dt id="dt-tx" title="Tx : température maximale quotidienne">Max du jour</dt><dd id="d-tx"></dd></div>
+        <div><dt id="dt-tn" title="Tn : température minimale quotidienne">Min du jour</dt><dd id="d-tn"></dd></div>
+        <div><dt id="dt-txmax">Pic de chaleur</dt><dd id="d-txmax"></dd></div>
+        <div><dt id="dt-hot">Jours ≥ 30 °C</dt><dd id="d-hot"></dd></div>
+        <div><dt id="dt-trop">Nuits ≥ 20 °C</dt><dd id="d-trop"></dd></div>
+        <div><dt id="dt-amp">Amplitude</dt><dd id="d-amp"></dd></div>
+      </dl>
+      <div class="detail-vs" id="detail-vs" hidden></div>
+      <ul class="checks" id="detail-checks" hidden></ul>
+      <p class="detail-flags" id="detail-flags"></p>
+      <p class="detail-water" id="detail-water"></p>
+      <p class="detail-future" id="detail-future" hidden></p>
+      <button type="button" class="compare-detail-btn" id="compare-add" hidden>
+        Ajouter au comparateur
+      </button>
+    </section>
+
+    <section class="compare" id="compare" hidden>
+      <div class="compare-top">
+        <p class="legend-title">Comparer</p>
+        <button type="button" class="compare-close" id="compare-close" aria-label="Fermer le comparateur">
+          ×
+        </button>
+      </div>
+      <p class="compare-hint" id="compare-hint">
+        Jusqu’à 4 villes. + dans la liste, ou « Ajouter » dans la fiche.
+      </p>
+      <div class="compare-table-wrap">
+        <table id="compare-table"></table>
+      </div>
+    </section>
+
+    <footer class="dock" id="dock">
+      <div class="dock-bar">
+        <div class="dock-period-wrap">
+          <p class="dock-label" id="dock-period-kicker">Mesures</p>
+          <p class="dock-period" id="period-label">Chargement…</p>
+        </div>
+        <div class="dock-best" id="best-spot">
+          <p class="dock-label" id="best-label">Spot le plus favorable</p>
+          <p class="dock-best-name" id="best-name">—</p>
+        </div>
+        <label class="field field-inline">
+          <span class="dock-label">Affichage</span>
+          <select id="view-mode">
+            <option value="all" selected>Toutes les aires</option>
+            <option value="favorables">Favorables seulement</option>
+            <option value="shortlist">Faible risque (à creuser)</option>
+          </select>
+        </label>
+        <label class="field field-inline" id="now-metric-field">
+          <span class="dock-label">Lecture</span>
+          <select id="now-metric">
+            <option value="comfort" selected>Confort (extrêmes, séries, nuits)</option>
+            <option value="streak35">Plus longue série ≥ 35 °C</option>
+            <option value="days30">Jours ≥ 30 °C</option>
+            <option value="nights20">Nuits tropicales (≥ 20 °C)</option>
+            <option value="txMean">Température max moyenne</option>
+            <option value="felt">Chaleur ressentie</option>
+          </select>
+        </label>
+        <label class="field field-inline" id="drias-metric-field" hidden>
+          <span class="dock-label">Indicateur 2050</span>
+          <select id="drias-metric">
+            <option value="combined" selected>Tous indicateurs confondus</option>
+            <option value="tx30">Jours ≥ 30 °C / an</option>
+            <option value="tr">Nuits tropicales / an</option>
+            <option value="tx_jja">Température max d’été</option>
+            <option value="felt">Chaleur ressentie</option>
+            <option value="ifm40">Jours de risque feu (IFM)</option>
+            <option value="swi_dry">Jours sols secs</option>
+          </select>
+        </label>
+        <div class="dock-actions">
+          <button type="button" class="export-btn" id="compare-toggle" hidden>
+            Comparer
+          </button>
+          <button type="button" class="export-btn" id="export-llm">
+            Exporter
+          </button>
+          <button
+            type="button"
+            class="ghost-btn dock-more-btn"
+            id="dock-more"
+            aria-expanded="false"
+            aria-controls="dock-extra"
+          >
+            Plus
+          </button>
+        </div>
+      </div>
+
+      <div class="dock-extra" id="dock-extra" hidden>
+        <label class="toggle">
+          <input type="checkbox" id="show-stations" />
+          <span>Stations sur la carte</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="lowland-only" checked />
+          <span>Sous 600 m</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="ville-only" checked />
+          <span>Ville (pôle ≥ 35 000)</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="settled-only" checked />
+          <span>Lieux de vie</span>
+        </label>
+        <div class="slider" id="slider">
+          <div class="slider-track" id="slider-track">
+            <div class="slider-range" id="slider-range"></div>
+          </div>
+          <input type="range" id="range-start" min="0" max="1" value="0" />
+          <input type="range" id="range-end" min="0" max="1" value="1" />
+        </div>
+        <div class="slider-ticks" id="slider-ticks"></div>
+      </div>
+    </footer>
+
+    <script src="./vendor/leaflet/leaflet.js"></script>
+    <script type="module" src="./app.js?v=zoom3"></script>
+  </body>
+</html>
