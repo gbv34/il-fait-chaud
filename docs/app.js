@@ -1449,8 +1449,6 @@ function formatObserved(row, key = currentNowMetric()) {
   return `confort ${v.toFixed(0)}`;
 }
 
-const JJA_END_YMD = 20260831;
-
 function ymdToday() {
   const now = new Date();
   return now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
@@ -1463,7 +1461,7 @@ function nextYmd(n) {
 }
 
 function extendDaysToToday(payload) {
-  const cap = Math.min(ymdToday(), JJA_END_YMD);
+  const cap = ymdToday();
   const days = payload.days.slice();
   if (!days.length) return payload;
   let last = days[days.length - 1];
@@ -4107,7 +4105,7 @@ map.on("zoomend moveend", () => {
 
 let payload;
 try {
-  payload = await fetch("./data/daily.json").then((r) => {
+  payload = await fetch("./data/daily.json?v=20260921").then((r) => {
     if (!r.ok) throw new Error("Impossible de charger daily.json");
     return r.json();
   });
