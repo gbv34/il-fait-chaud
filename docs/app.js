@@ -917,7 +917,8 @@ function renderHeatSeries() {
     if (els.sliderHeat) els.sliderHeat.replaceChildren();
     return;
   }
-  const episodes = heatEpisodes(src.station.tx, 0, last, 35);
+  const yearEpisodes = heatEpisodes(src.station.tx, 0, last, 35);
+  const episodes = heatEpisodes(src.station.tx, sel0, sel1, 35);
   const total = episodes.reduce((n, s) => n + s.n, 0);
   const place =
     src.stationName && src.stationName.toLowerCase() !== src.label.toLowerCase()
@@ -933,31 +934,23 @@ function renderHeatSeries() {
       ? `${episodes.length} série${episodes.length > 1 ? "s" : ""} · ${total} j ≥ 35 °C`
       : "aucune série";
   }
-  const axis0 = episodes[0]?.i0 ?? sel0;
-  const axis1 = episodes[episodes.length - 1]?.i1 ?? last;
-  const zoom = Math.max(axis1 - axis0, 1);
+  const stay = Math.max(sel1 - sel0, 1);
   const year = Math.max(last, 1);
   if (els.heatSeriesAxis) {
-    if (episodes.length) {
-      els.heatSeriesAxis.replaceChildren();
-      const start = document.createElement("span");
-      start.textContent = formatDay(data.days[axis0]);
-      const end = document.createElement("span");
-      end.textContent = formatDay(data.days[axis1]);
-      els.heatSeriesAxis.append(start, end);
-    } else {
-      els.heatSeriesAxis.replaceChildren();
-    }
+    els.heatSeriesAxis.replaceChildren();
+    const start = document.createElement("span");
+    start.textContent = formatDay(data.days[sel0]);
+    const end = document.createElement("span");
+    end.textContent = formatDay(data.days[sel1]);
+    els.heatSeriesAxis.append(start, end);
   }
-  const blocks = (host, span, origin, className) => {
+  const paintBlocks = (host, items, span, origin, className, markIn) => {
     if (!host) return;
     host.replaceChildren(
-      ...episodes.flatMap((s) => {
-        const inStay = s.i1 >= sel0 && s.i0 <= sel1;
-        const nodes = [];
+      ...items.map((s) => {
         const block = document.createElement("span");
         block.className = className;
-        if (inStay) block.classList.add("is-in");
+        if (!markIn || (s.i1 >= sel0 && s.i0 <= sel1)) block.classList.add("is-in");
         block.style.left = `${((s.i0 - origin) / span) * 100}%`;
         block.style.width = `${((s.i1 - s.i0 + 1) / span) * 100}%`;
         const peak = s.peak != null ? ` · pic ${fmtFr(s.peak)} °C` : "";
@@ -965,23 +958,22 @@ function renderHeatSeries() {
           ? ` · ${s.bridges.map((b) => `${fmtFr(b.t)} °C`).join(", ")}`
           : "";
         block.title = `${formatSpan(data.days[s.i0], data.days[s.i1])} · ${s.n} j ≥ 35 °C${peak}${dip}`;
-        nodes.push(block);
-        return nodes;
+        return block;
       }),
     );
   };
-  blocks(els.heatSeriesTrack, zoom, axis0, "heat-series-block");
-  blocks(els.sliderHeat, year, 0, "slider-heat-block");
+  paintBlocks(els.heatSeriesTrack, episodes, stay, sel0, "heat-series-block", false);
+  paintBlocks(els.sliderHeat, yearEpisodes, year, 0, "slider-heat-block", true);
   if (els.heatSeriesList) {
     if (!episodes.length) {
       const li = document.createElement("li");
-      li.textContent = "Pas de jour ≥ 35 °C sur l’année.";
+      li.textContent = "Pas de jour ≥ 35 °C sur la période.";
       els.heatSeriesList.replaceChildren(li);
     } else {
       els.heatSeriesList.replaceChildren(
         ...episodes.map((s) => {
           const li = document.createElement("li");
-          if (s.i1 >= sel0 && s.i0 <= sel1) li.className = "is-in";
+          li.className = "is-in";
           const peak = s.peak != null ? ` · pic ${fmtFr(s.peak)} °C` : "";
           const dip = s.bridges.length
             ? ` · 1 j à ${fmtFr(s.bridges[0].t)} °C`
@@ -4226,6 +4218,7 @@ function onRangeInput(which) {
   if (which === "start" && a > b) els.end.value = String(a);
   if (which === "end" && b < a) els.start.value = String(b);
   updateSliderChrome();
+  renderHeatSeries();
   scheduleRender();
 }
 
@@ -4241,6 +4234,7 @@ function onDateInput(which) {
   els.start.value = String(i0);
   els.end.value = String(i1);
   updateSliderChrome();
+  renderHeatSeries();
   scheduleRender();
 }
 
