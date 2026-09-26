@@ -11,7 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=stay1" />
+    <link rel="stylesheet" href="./styles.css?v=streaks1" />
   </head>
   <body>
     <div id="map"></div>
@@ -329,7 +329,7 @@
           <span class="dock-label">Lecture</span>
           <select id="now-metric">
             <option value="comfort" selected>Confort (extrêmes, séries, nuits)</option>
-            <option value="streak35">Plus longue série ≥ 35 °C</option>
+            <option value="streak35">Séries ≥ 35 °C</option>
             <option value="days30">Jours ≥ 30 °C</option>
             <option value="nights20">Nuits tropicales (≥ 20 °C)</option>
             <option value="txMean">Température max moyenne</option>
@@ -373,6 +373,18 @@
           <input type="date" id="date-start" />
         </label>
         <div class="slider-block">
+          <div class="heat-series" id="heat-series" hidden>
+            <div class="heat-series-head">
+              <p class="dock-label">Séries ≥ 35 °C · 2026</p>
+              <p class="heat-series-sum" id="heat-series-sum"></p>
+              <button type="button" class="heat-series-close" id="heat-series-close" aria-label="Fermer">
+                ×
+              </button>
+            </div>
+            <p class="heat-series-place" id="heat-series-place"></p>
+            <div class="heat-series-track" id="heat-series-track" aria-hidden="true"></div>
+            <ol class="heat-series-list" id="heat-series-list"></ol>
+          </div>
           <div class="slider" id="slider">
             <div class="slider-track" id="slider-track">
               <div class="slider-range" id="slider-range"></div>
@@ -409,6 +421,6 @@
     </footer>
 
     <script src="./vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="./app.js?v=stay1"></script>
+    <script type="module" src="./app.js?v=streaks1"></script>
   </body>
 </html>

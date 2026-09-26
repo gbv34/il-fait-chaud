@@ -630,6 +630,12 @@ const els = {
   dateStart: document.getElementById("date-start"),
   dateEnd: document.getElementById("date-end"),
   stayRange: document.getElementById("stay-range"),
+  heatSeries: document.getElementById("heat-series"),
+  heatSeriesSum: document.getElementById("heat-series-sum"),
+  heatSeriesPlace: document.getElementById("heat-series-place"),
+  heatSeriesTrack: document.getElementById("heat-series-track"),
+  heatSeriesList: document.getElementById("heat-series-list"),
+  heatSeriesClose: document.getElementById("heat-series-close"),
   detail: document.getElementById("detail"),
   close: document.getElementById("detail-close"),
   dRegion: document.getElementById("detail-region"),
@@ -718,6 +724,7 @@ let aires = [];
 let stationById = new Map();
 let amenityRadius = 30;
 let selectedId = null;
+let heatSeriesDismissed = false;
 ensureHomeMarker();
 let listedRows = [];
 let lastPainted = [];
@@ -774,6 +781,135 @@ function longestStreak(arr, i0, i1, thresh, scale = 10) {
     }
   }
   return best;
+}
+
+function allStreaks(arr, i0, i1, thresh, scale = 10) {
+  const out = [];
+  let start = -1;
+  for (let i = i0; i <= i1 + 1; i++) {
+    const hot = i <= i1 && arr[i] != null && arr[i] / scale >= thresh;
+    if (hot && start < 0) start = i;
+    if (!hot && start >= 0) {
+      out.push({ i0: start, i1: i - 1, n: i - start });
+      start = -1;
+    }
+  }
+  return out;
+}
+
+function formatSpan(a, b) {
+  if (a === b) return formatDay(a);
+  const A = ymd(a);
+  const B = ymd(b);
+  if (A.m === B.m) return `${A.d}–${B.d} ${MONTHS[A.m - 1]}`;
+  return `${formatDay(a)} – ${formatDay(b)}`;
+}
+
+function nearestStation(lat, lon) {
+  let best = null;
+  let bestD = Infinity;
+  const cos = Math.cos((lat * Math.PI) / 180);
+  for (const st of stationById.values()) {
+    const d = (st.lat - lat) ** 2 + ((st.lon - lon) * cos) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = st;
+    }
+  }
+  return best;
+}
+
+function stationForHeatSeries() {
+  const row =
+    lastPainted.find((p) => p.s.id === selectedId)?.s ||
+    (selectedId === HOME.id ? HOME : null) ||
+    lastPainted[0]?.s;
+  if (!row) return null;
+  if (row.kind === "aire") {
+    const aire = aires.find((a) => a.id === row.id);
+    const station = stationById.get(aire?.station_id) || nearestStation(row.lat, row.lon);
+    if (!station) return null;
+    return { station, label: placeName(row), picked: Boolean(selectedId) };
+  }
+  const station = stationById.get(row.id) || nearestStation(row.lat, row.lon);
+  if (!station) return null;
+  return { station, label: placeName(row) || titleCase(station.n), picked: Boolean(selectedId) };
+}
+
+function setHeatSeriesOpen(open) {
+  if (!els.heatSeries) return;
+  els.heatSeries.hidden = !open;
+  document.body.classList.toggle("has-heat-series", open);
+  refreshMapSize();
+}
+
+function renderHeatSeries() {
+  if (!els.heatSeries) return;
+  const show =
+    horizon === "now" &&
+    currentNowMetric() === "streak35" &&
+    !heatSeriesDismissed &&
+    Boolean(data?.days?.length);
+  if (!show) {
+    setHeatSeriesOpen(false);
+    return;
+  }
+  const last = lastObservedIndex(data.days);
+  const [sel0, sel1] = currentRange();
+  const src = stationForHeatSeries();
+  if (!src) {
+    setHeatSeriesOpen(true);
+    if (els.heatSeriesPlace) {
+      els.heatSeriesPlace.textContent = "Clique une ville pour voir ses séries.";
+    }
+    if (els.heatSeriesSum) els.heatSeriesSum.textContent = "";
+    if (els.heatSeriesTrack) els.heatSeriesTrack.replaceChildren();
+    if (els.heatSeriesList) els.heatSeriesList.replaceChildren();
+    return;
+  }
+  const streaks = allStreaks(src.station.tx, 0, last, 35);
+  const total = streaks.reduce((n, s) => n + s.n, 0);
+  const span = Math.max(last, 1);
+  if (els.heatSeriesPlace) {
+    els.heatSeriesPlace.textContent = src.picked
+      ? src.label
+      : `${src.label} · clique une autre ville pour comparer`;
+  }
+  if (els.heatSeriesSum) {
+    els.heatSeriesSum.textContent = streaks.length
+      ? `${streaks.length} série${streaks.length > 1 ? "s" : ""} · ${total} j`
+      : "aucune série";
+  }
+  if (els.heatSeriesTrack) {
+    els.heatSeriesTrack.replaceChildren(
+      ...streaks.map((s) => {
+        const block = document.createElement("span");
+        block.className = "heat-series-block";
+        if (s.i1 >= sel0 && s.i0 <= sel1) block.classList.add("is-in");
+        block.style.left = `${(s.i0 / span) * 100}%`;
+        block.style.width = `${Math.max((s.n / span) * 100, 0.6)}%`;
+        block.title = `${formatSpan(data.days[s.i0], data.days[s.i1])} · ${s.n} j`;
+        return block;
+      }),
+    );
+  }
+  if (els.heatSeriesList) {
+    if (!streaks.length) {
+      const li = document.createElement("li");
+      li.textContent = "Pas de jour ≥ 35 °C sur l’année.";
+      els.heatSeriesList.replaceChildren(li);
+    } else {
+      els.heatSeriesList.replaceChildren(
+        ...streaks.map((s) => {
+          const li = document.createElement("li");
+          if (s.i1 >= sel0 && s.i0 <= sel1) li.className = "is-in";
+          li.textContent = `${formatSpan(data.days[s.i0], data.days[s.i1])} · ${s.n} j`;
+          return li;
+        }),
+      );
+    }
+  }
+  setHeatSeriesOpen(true);
 }
 
 function longestHotNights(tx, tn, i0, i1, txMin, tnMin) {
@@ -2544,6 +2680,7 @@ function airNote(s) {
 
 function showDetail(s) {
   selectedId = s.id;
+  renderHeatSeries();
   restyleMarkers();
   els.detail.hidden = false;
   fillDetailVs(s);
@@ -2960,6 +3097,7 @@ function aireRowNow(aire, i0, i1) {
   const amen = aire.amen || amenityOf(aire.id) || amenityOf(aire.station_id);
   stats.id = aire.id;
   stats.kind = "aire";
+  stats.station_id = aire.station_id;
   stats.name = aire.n;
   stats.pole = aire.pole;
   stats.lat = aire.lat;
@@ -3145,6 +3283,7 @@ function applyHorizonChrome() {
   els.horizonNow.classList.toggle("is-on", horizon === "now");
   els.horizon2050.classList.toggle("is-on", horizon === "2050");
   if (els.stayRange) els.stayRange.hidden = horizon === "2050";
+  if (horizon === "2050") setHeatSeriesOpen(false);
   refreshMapSize();
   els.driasMetricField.hidden = horizon !== "2050";
   if (els.nowMetricField) els.nowMetricField.hidden = horizon === "2050";
@@ -3188,7 +3327,7 @@ function applyHorizonChrome() {
             : nowKey === "felt"
               ? "Chaleur ressentie observée"
               : nowKey === "streak35"
-                ? "Plus longue série ≥ 35 °C"
+                ? "Séries ≥ 35 °C"
                 : "Confort observé (extrêmes et séries)";
     els.legendLow.textContent = "Plus supportable";
     els.legendHigh.textContent = "Plus éprouvant";
@@ -3365,6 +3504,7 @@ async function render() {
   }
 
   lastPainted = painted;
+  renderHeatSeries();
   syncStationMarkers(painted);
   syncMassifMarkers();
   updateCityLabels();
@@ -4059,8 +4199,20 @@ if (els.settled) els.settled.addEventListener("change", render);
 els.view.addEventListener("change", render);
 els.driasMetric.addEventListener("change", render);
 els.driasMetric.addEventListener("input", render);
-els.nowMetric.addEventListener("change", render);
-els.nowMetric.addEventListener("input", render);
+els.nowMetric.addEventListener("change", () => {
+  if (els.nowMetric.value === "streak35") heatSeriesDismissed = false;
+  render();
+});
+els.nowMetric.addEventListener("input", () => {
+  if (els.nowMetric.value === "streak35") heatSeriesDismissed = false;
+  render();
+});
+if (els.heatSeriesClose) {
+  els.heatSeriesClose.addEventListener("click", () => {
+    heatSeriesDismissed = true;
+    setHeatSeriesOpen(false);
+  });
+}
 document.querySelectorAll("[data-crit], [data-country], [data-band]").forEach((box) => {
   box.addEventListener("input", () => {
     els.period.textContent = "Mise à jour…";

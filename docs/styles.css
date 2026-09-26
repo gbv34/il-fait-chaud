@@ -75,6 +75,14 @@ body.horizon-2050.dock-expanded {
   --status-h: 108px;
 }
 
+body.has-heat-series {
+  --status-h: 214px;
+}
+
+body.has-heat-series.dock-expanded {
+  --status-h: 326px;
+}
+
 body.is-horizon-fade #map {
   filter: saturate(0.6) brightness(0.82);
   transition: filter 0.35s ease;
@@ -1293,10 +1301,95 @@ body.drawer-collapsed .drawer {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px 14px;
-  align-items: center;
+  align-items: end;
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px solid var(--line);
+}
+
+.heat-series {
+  margin: 0 0 8px;
+  padding: 7px 8px 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(26, 22, 19, 0.95);
+}
+
+.heat-series[hidden] {
+  display: none;
+}
+
+.heat-series-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heat-series-sum {
+  margin: 0 0 0 auto;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.heat-series-close {
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.heat-series-close:hover {
+  color: var(--ink);
+}
+
+.heat-series-place {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.heat-series-track {
+  position: relative;
+  height: 10px;
+  margin: 7px 0 6px;
+  background: var(--track);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.heat-series-block {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 2px;
+  background: #c44a38;
+  border-radius: 99px;
+}
+
+.heat-series-block.is-in {
+  background: var(--hot);
+}
+
+.heat-series-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  max-height: 44px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.heat-series-list li.is-in {
+  color: var(--ink);
 }
 
 .stay-date {
@@ -1477,6 +1570,14 @@ body.drawer-collapsed .drawer {
 
   body.horizon-2050.dock-expanded {
     --status-h: 148px;
+  }
+
+  body.has-heat-series {
+    --status-h: 268px;
+  }
+
+  body.has-heat-series.dock-expanded {
+    --status-h: 380px;
   }
 
   .dock-stay {
