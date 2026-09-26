@@ -11,7 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=streaks1" />
+    <link rel="stylesheet" href="./styles.css?v=streaks2" />
   </head>
   <body>
     <div id="map"></div>
@@ -382,11 +382,13 @@
               </button>
             </div>
             <p class="heat-series-place" id="heat-series-place"></p>
+            <div class="heat-series-axis" id="heat-series-axis"></div>
             <div class="heat-series-track" id="heat-series-track" aria-hidden="true"></div>
             <ol class="heat-series-list" id="heat-series-list"></ol>
           </div>
           <div class="slider" id="slider">
             <div class="slider-track" id="slider-track">
+              <div class="slider-heat" id="slider-heat"></div>
               <div class="slider-range" id="slider-range"></div>
             </div>
             <input type="range" id="range-start" min="0" max="1" value="0" />
@@ -421,6 +423,6 @@
     </footer>
 
     <script src="./vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="./app.js?v=streaks1"></script>
+    <script type="module" src="./app.js?v=streaks2"></script>
   </body>
 </html>

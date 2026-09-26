@@ -76,7 +76,7 @@ body.horizon-2050.dock-expanded {
 }
 
 body.has-heat-series {
-  --status-h: 214px;
+  --status-h: 248px;
 }
 
 body.has-heat-series.dock-expanded {
@@ -1353,43 +1353,80 @@ body.drawer-collapsed .drawer {
   color: var(--ink);
 }
 
+.heat-series-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0 2px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
 .heat-series-track {
   position: relative;
-  height: 10px;
-  margin: 7px 0 6px;
+  height: 14px;
+  margin: 0 0 8px;
   background: var(--track);
-  border-radius: 99px;
-  overflow: hidden;
+  border-radius: 3px;
 }
 
 .heat-series-block {
   position: absolute;
   top: 0;
   height: 100%;
-  min-width: 2px;
   background: #c44a38;
-  border-radius: 99px;
+  border-radius: 2px;
 }
 
 .heat-series-block.is-in {
   background: var(--hot);
 }
 
+.heat-series-block.is-bridge {
+  opacity: 0.35;
+}
+
 .heat-series-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px 8px;
-  max-height: 44px;
+  gap: 4px;
+  max-height: 72px;
   overflow: auto;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.heat-series-list li {
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
   font-size: 11px;
   color: var(--muted);
 }
 
 .heat-series-list li.is-in {
   color: var(--ink);
+  border-color: rgba(226, 91, 69, 0.45);
+}
+
+.slider-heat {
+  position: absolute;
+  inset: -5px 0;
+  pointer-events: none;
+}
+
+.slider-heat-block {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #c44a38;
+  border-radius: 2px;
+  opacity: 0.7;
+}
+
+.slider-heat-block.is-in {
+  background: var(--hot);
+  opacity: 0.95;
 }
 
 .stay-date {
@@ -1428,6 +1465,7 @@ body.drawer-collapsed .drawer {
   top: 12px;
   height: 4px;
   background: var(--track);
+  overflow: visible;
 }
 
 .slider-range {

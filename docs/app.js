@@ -634,8 +634,10 @@ const els = {
   heatSeriesSum: document.getElementById("heat-series-sum"),
   heatSeriesPlace: document.getElementById("heat-series-place"),
   heatSeriesTrack: document.getElementById("heat-series-track"),
+  heatSeriesAxis: document.getElementById("heat-series-axis"),
   heatSeriesList: document.getElementById("heat-series-list"),
   heatSeriesClose: document.getElementById("heat-series-close"),
+  sliderHeat: document.getElementById("slider-heat"),
   detail: document.getElementById("detail"),
   close: document.getElementById("detail-close"),
   dRegion: document.getElementById("detail-region"),
@@ -797,6 +799,41 @@ function allStreaks(arr, i0, i1, thresh, scale = 10) {
   return out;
 }
 
+function streakPeak(arr, i0, i1, scale = 10) {
+  let peak = -Infinity;
+  for (let i = i0; i <= i1; i++) {
+    if (arr[i] != null) peak = Math.max(peak, arr[i] / scale);
+  }
+  return Number.isFinite(peak) ? peak : null;
+}
+
+function heatEpisodes(arr, i0, i1, thresh = 35, scale = 10) {
+  const raw = allStreaks(arr, i0, i1, thresh, scale);
+  const out = [];
+  for (const streak of raw) {
+    const prev = out[out.length - 1];
+    const gap = prev ? streak.i0 - prev.i1 - 1 : 0;
+    const gapTx = gap === 1 ? arr[prev.i1 + 1] : null;
+    const gapT = gapTx == null ? null : gapTx / scale;
+    if (prev && gap === 1 && gapT != null && gapT >= thresh - 0.3) {
+      const gapI = prev.i1 + 1;
+      prev.i1 = streak.i1;
+      prev.n += streak.n;
+      prev.bridges.push({ i: gapI, t: gapT });
+      prev.peak = Math.max(prev.peak ?? -Infinity, streakPeak(arr, streak.i0, streak.i1) ?? -Infinity);
+      continue;
+    }
+    out.push({
+      i0: streak.i0,
+      i1: streak.i1,
+      n: streak.n,
+      peak: streakPeak(arr, streak.i0, streak.i1),
+      bridges: [],
+    });
+  }
+  return out;
+}
+
 function formatSpan(a, b) {
   if (a === b) return formatDay(a);
   const A = ymd(a);
@@ -829,11 +866,21 @@ function stationForHeatSeries() {
     const aire = aires.find((a) => a.id === row.id);
     const station = stationById.get(aire?.station_id) || nearestStation(row.lat, row.lon);
     if (!station) return null;
-    return { station, label: placeName(row), picked: Boolean(selectedId) };
+    return {
+      station,
+      label: placeName(row),
+      stationName: titleCase(station.n),
+      picked: Boolean(selectedId),
+    };
   }
   const station = stationById.get(row.id) || nearestStation(row.lat, row.lon);
   if (!station) return null;
-  return { station, label: placeName(row) || titleCase(station.n), picked: Boolean(selectedId) };
+  return {
+    station,
+    label: placeName(row) || titleCase(station.n),
+    stationName: titleCase(station.n),
+    picked: Boolean(selectedId),
+  };
 }
 
 function setHeatSeriesOpen(open) {
@@ -852,6 +899,7 @@ function renderHeatSeries() {
     Boolean(data?.days?.length);
   if (!show) {
     setHeatSeriesOpen(false);
+    if (els.sliderHeat) els.sliderHeat.replaceChildren();
     return;
   }
   const last = lastObservedIndex(data.days);
@@ -863,47 +911,82 @@ function renderHeatSeries() {
       els.heatSeriesPlace.textContent = "Clique une ville pour voir ses séries.";
     }
     if (els.heatSeriesSum) els.heatSeriesSum.textContent = "";
+    if (els.heatSeriesAxis) els.heatSeriesAxis.replaceChildren();
     if (els.heatSeriesTrack) els.heatSeriesTrack.replaceChildren();
     if (els.heatSeriesList) els.heatSeriesList.replaceChildren();
+    if (els.sliderHeat) els.sliderHeat.replaceChildren();
     return;
   }
-  const streaks = allStreaks(src.station.tx, 0, last, 35);
-  const total = streaks.reduce((n, s) => n + s.n, 0);
-  const span = Math.max(last, 1);
+  const episodes = heatEpisodes(src.station.tx, 0, last, 35);
+  const total = episodes.reduce((n, s) => n + s.n, 0);
+  const place =
+    src.stationName && src.stationName.toLowerCase() !== src.label.toLowerCase()
+      ? `${src.label} · poste ${src.stationName}`
+      : src.label;
   if (els.heatSeriesPlace) {
     els.heatSeriesPlace.textContent = src.picked
-      ? src.label
-      : `${src.label} · clique une autre ville pour comparer`;
+      ? place
+      : `${place} · clique une autre ville pour comparer`;
   }
   if (els.heatSeriesSum) {
-    els.heatSeriesSum.textContent = streaks.length
-      ? `${streaks.length} série${streaks.length > 1 ? "s" : ""} · ${total} j`
+    els.heatSeriesSum.textContent = episodes.length
+      ? `${episodes.length} série${episodes.length > 1 ? "s" : ""} · ${total} j ≥ 35 °C`
       : "aucune série";
   }
-  if (els.heatSeriesTrack) {
-    els.heatSeriesTrack.replaceChildren(
-      ...streaks.map((s) => {
+  const axis0 = episodes[0]?.i0 ?? sel0;
+  const axis1 = episodes[episodes.length - 1]?.i1 ?? last;
+  const zoom = Math.max(axis1 - axis0, 1);
+  const year = Math.max(last, 1);
+  if (els.heatSeriesAxis) {
+    if (episodes.length) {
+      els.heatSeriesAxis.replaceChildren();
+      const start = document.createElement("span");
+      start.textContent = formatDay(data.days[axis0]);
+      const end = document.createElement("span");
+      end.textContent = formatDay(data.days[axis1]);
+      els.heatSeriesAxis.append(start, end);
+    } else {
+      els.heatSeriesAxis.replaceChildren();
+    }
+  }
+  const blocks = (host, span, origin, className) => {
+    if (!host) return;
+    host.replaceChildren(
+      ...episodes.flatMap((s) => {
+        const inStay = s.i1 >= sel0 && s.i0 <= sel1;
+        const nodes = [];
         const block = document.createElement("span");
-        block.className = "heat-series-block";
-        if (s.i1 >= sel0 && s.i0 <= sel1) block.classList.add("is-in");
-        block.style.left = `${(s.i0 / span) * 100}%`;
-        block.style.width = `${Math.max((s.n / span) * 100, 0.6)}%`;
-        block.title = `${formatSpan(data.days[s.i0], data.days[s.i1])} · ${s.n} j`;
-        return block;
+        block.className = className;
+        if (inStay) block.classList.add("is-in");
+        block.style.left = `${((s.i0 - origin) / span) * 100}%`;
+        block.style.width = `${((s.i1 - s.i0 + 1) / span) * 100}%`;
+        const peak = s.peak != null ? ` · pic ${fmtFr(s.peak)} °C` : "";
+        const dip = s.bridges.length
+          ? ` · ${s.bridges.map((b) => `${fmtFr(b.t)} °C`).join(", ")}`
+          : "";
+        block.title = `${formatSpan(data.days[s.i0], data.days[s.i1])} · ${s.n} j ≥ 35 °C${peak}${dip}`;
+        nodes.push(block);
+        return nodes;
       }),
     );
-  }
+  };
+  blocks(els.heatSeriesTrack, zoom, axis0, "heat-series-block");
+  blocks(els.sliderHeat, year, 0, "slider-heat-block");
   if (els.heatSeriesList) {
-    if (!streaks.length) {
+    if (!episodes.length) {
       const li = document.createElement("li");
       li.textContent = "Pas de jour ≥ 35 °C sur l’année.";
       els.heatSeriesList.replaceChildren(li);
     } else {
       els.heatSeriesList.replaceChildren(
-        ...streaks.map((s) => {
+        ...episodes.map((s) => {
           const li = document.createElement("li");
           if (s.i1 >= sel0 && s.i0 <= sel1) li.className = "is-in";
-          li.textContent = `${formatSpan(data.days[s.i0], data.days[s.i1])} · ${s.n} j`;
+          const peak = s.peak != null ? ` · pic ${fmtFr(s.peak)} °C` : "";
+          const dip = s.bridges.length
+            ? ` · 1 j à ${fmtFr(s.bridges[0].t)} °C`
+            : "";
+          li.textContent = `${formatSpan(data.days[s.i0], data.days[s.i1])} · ${s.n} j${peak}${dip}`;
           return li;
         }),
       );
@@ -4207,12 +4290,13 @@ els.nowMetric.addEventListener("input", () => {
   if (els.nowMetric.value === "streak35") heatSeriesDismissed = false;
   render();
 });
-if (els.heatSeriesClose) {
-  els.heatSeriesClose.addEventListener("click", () => {
-    heatSeriesDismissed = true;
-    setHeatSeriesOpen(false);
-  });
-}
+  if (els.heatSeriesClose) {
+    els.heatSeriesClose.addEventListener("click", () => {
+      heatSeriesDismissed = true;
+      setHeatSeriesOpen(false);
+      if (els.sliderHeat) els.sliderHeat.replaceChildren();
+    });
+  }
 document.querySelectorAll("[data-crit], [data-country], [data-band]").forEach((box) => {
   box.addEventListener("input", () => {
     els.period.textContent = "Mise à jour…";
