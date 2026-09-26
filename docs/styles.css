@@ -10,7 +10,7 @@
   --track: rgba(243, 235, 225, 0.16);
   --drawer-w: 320px;
   --topbar-h: 52px;
-  --status-h: 56px;
+  --status-h: 118px;
 }
 
 * {
@@ -63,8 +63,12 @@ body.drawer-collapsed {
   --drawer-w: 0px;
 }
 
+body.horizon-2050 {
+  --status-h: 56px;
+}
+
 body.dock-expanded {
-  --status-h: 168px;
+  --status-h: 230px;
 }
 
 body.horizon-2050.dock-expanded {
@@ -1212,8 +1216,7 @@ body.drawer-collapsed .drawer {
   display: none;
 }
 
-.horizon-2050 .slider,
-.horizon-2050 .slider-ticks {
+.horizon-2050 .dock-stay {
   display: none;
 }
 
@@ -1286,11 +1289,43 @@ body.drawer-collapsed .drawer {
   color: var(--ink);
 }
 
+.dock-stay {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.stay-date {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.stay-date input[type="date"] {
+  width: 11.2rem;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #1a1613;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  color-scheme: dark;
+}
+
+.slider-block {
+  min-width: 0;
+}
+
 .slider {
   position: relative;
   height: 28px;
-  flex: 1 1 220px;
-  min-width: 180px;
+  min-width: 140px;
 }
 
 .slider-track {
@@ -1341,12 +1376,18 @@ body.drawer-collapsed .drawer {
 }
 
 .slider-ticks {
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  height: 16px;
   margin-top: 2px;
   font-size: 11px;
   color: var(--muted);
-  flex: 1 1 100%;
+}
+
+.slider-ticks span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .leaflet-control-attribution {
@@ -1423,7 +1464,32 @@ body.drawer-collapsed .drawer {
 @media (max-width: 900px) {
   :root {
     --drawer-w: 0px;
+    --status-h: 168px;
+  }
+
+  body.horizon-2050 {
     --status-h: 72px;
+  }
+
+  body.dock-expanded {
+    --status-h: 280px;
+  }
+
+  body.horizon-2050.dock-expanded {
+    --status-h: 148px;
+  }
+
+  .dock-stay {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dock-stay .slider-block {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .stay-date input[type="date"] {
+    width: 100%;
   }
 
   .drawer {

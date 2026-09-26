@@ -627,6 +627,9 @@ const els = {
   settled: document.getElementById("settled-only"),
   view: document.getElementById("view-mode"),
   ticks: document.getElementById("slider-ticks"),
+  dateStart: document.getElementById("date-start"),
+  dateEnd: document.getElementById("date-end"),
+  stayRange: document.getElementById("stay-range"),
   detail: document.getElementById("detail"),
   close: document.getElementById("detail-close"),
   dRegion: document.getElementById("detail-region"),
@@ -1460,21 +1463,77 @@ function nextYmd(n) {
   return dt.getFullYear() * 10000 + (dt.getMonth() + 1) * 100 + dt.getDate();
 }
 
-function extendDaysToToday(payload) {
-  const cap = ymdToday();
+function prevYmd(n) {
+  const { y, m, d } = ymd(n);
+  const dt = new Date(y, m - 1, d - 1);
+  return dt.getFullYear() * 10000 + (dt.getMonth() + 1) * 100 + dt.getDate();
+}
+
+function yearStartYmd() {
+  return new Date().getFullYear() * 10000 + 101;
+}
+
+function ymdToIso(n) {
+  const { y, m, d } = ymd(n);
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function isoToYmd(iso) {
+  return Number(String(iso).replace(/-/g, ""));
+}
+
+function indexOfYmd(n, days = data?.days || []) {
+  let best = 0;
+  for (let i = 0; i < days.length; i++) {
+    if (days[i] <= n) best = i;
+    else break;
+  }
+  return best;
+}
+
+function defaultStartIndex(days, last) {
+  const june = new Date().getFullYear() * 10000 + 601;
+  const idx = days.findIndex((n) => n >= june);
+  if (idx >= 0 && idx <= last) return idx;
+  return 0;
+}
+
+function extendDaysToYear(payload) {
+  const startCap = yearStartYmd();
+  const endCap = ymdToday();
   const days = payload.days.slice();
   if (!days.length) return payload;
-  let last = days[days.length - 1];
-  const extra = [];
-  while (last < cap) {
-    last = nextYmd(last);
-    extra.push(last);
+
+  const extraStart = [];
+  let first = days[0];
+  while (first > startCap) {
+    first = prevYmd(first);
+    extraStart.unshift(first);
   }
-  if (!extra.length) return payload;
-  payload.days = days.concat(extra);
+
+  const extraEnd = [];
+  let last = days[days.length - 1];
+  while (last < endCap) {
+    last = nextYmd(last);
+    extraEnd.push(last);
+  }
+
+  if (!extraStart.length && !extraEnd.length) {
+    payload.start = days[0];
+    payload.end = days[days.length - 1];
+    return payload;
+  }
+
+  payload.days = extraStart.concat(days, extraEnd);
+  payload.start = payload.days[0];
   payload.end = payload.days[payload.days.length - 1];
   for (const station of payload.stations) {
-    for (let i = 0; i < extra.length; i++) {
+    if (extraStart.length) {
+      const pad = extraStart.map(() => null);
+      station.tx = pad.concat(station.tx);
+      station.tn = pad.concat(station.tn);
+    }
+    for (let i = 0; i < extraEnd.length; i++) {
       station.tx.push(null);
       station.tn.push(null);
     }
@@ -2810,10 +2869,25 @@ function updateSliderChrome() {
   const max = Number(els.start.max);
   const a = Number(els.start.value);
   const b = Number(els.end.value);
-  const left = (Math.min(a, b) / max) * 100;
-  const right = (Math.max(a, b) / max) * 100;
+  const left = (Math.min(a, b) / Math.max(max, 1)) * 100;
+  const right = (Math.max(a, b) / Math.max(max, 1)) * 100;
   els.range.style.left = `${left}%`;
   els.range.style.width = `${right - left}%`;
+  syncDateInputs();
+}
+
+function syncDateInputs() {
+  if (!data?.days?.length || !els.dateStart || !els.dateEnd) return;
+  const last = Number(els.start.max);
+  const [i0, i1] = currentRange();
+  const min = ymdToIso(data.days[0]);
+  const max = ymdToIso(data.days[last] || data.days[data.days.length - 1]);
+  els.dateStart.min = min;
+  els.dateStart.max = max;
+  els.dateEnd.min = min;
+  els.dateEnd.max = max;
+  els.dateStart.value = ymdToIso(data.days[i0]);
+  els.dateEnd.value = ymdToIso(data.days[i1]);
 }
 
 function currentRange() {
@@ -3070,6 +3144,8 @@ function applyHorizonChrome() {
   document.body.classList.toggle("horizon-2050", horizon === "2050");
   els.horizonNow.classList.toggle("is-on", horizon === "now");
   els.horizon2050.classList.toggle("is-on", horizon === "2050");
+  if (els.stayRange) els.stayRange.hidden = horizon === "2050";
+  refreshMapSize();
   els.driasMetricField.hidden = horizon !== "2050";
   if (els.nowMetricField) els.nowMetricField.hidden = horizon === "2050";
   if (horizon === "2050") {
@@ -3099,9 +3175,9 @@ function applyHorizonChrome() {
     syncCompareToggle();
   } else {
     const nowKey = currentNowMetric();
-    els.kicker.textContent = "Mesures · été en cours";
+    els.kicker.textContent = "Mesures · période choisie";
     els.brandSub.textContent =
-      "Aires d’attraction INSEE, mesures de l’été au poste le plus proche du pôle. Ce n’est pas une projection.";
+      "Aires d’attraction INSEE, mesures du 1er janvier à aujourd’hui au poste le plus proche du pôle. Choisis une entrée et une sortie. Ce n’est pas une projection.";
     els.legendTitle.textContent =
       nowKey === "days30"
         ? "Jours ≥ 30 °C observés"
@@ -3121,7 +3197,7 @@ function applyHorizonChrome() {
     if (els.critFireLabel) els.critFireLabel.textContent = "Peu de feu (risques officiels)";
     if (els.criteriaHelp) {
       els.criteriaHelp.textContent =
-        "Mesures de l’été en cours. Le confort se lit sur les extrêmes et leur continuité (séries de jours chauds, nuits), pas sur la moyenne.";
+        "Mesures de la période Entrée → Sortie. Le confort se lit sur les extrêmes et leur continuité (séries de jours chauds, nuits), pas sur la moyenne.";
     }
     setBandCaptions();
     compareOpen = false;
@@ -3930,28 +4006,53 @@ function onRangeInput(which) {
   scheduleRender();
 }
 
+function onDateInput(which) {
+  if (!data?.days?.length) return;
+  const startY = isoToYmd(els.dateStart.value);
+  const endY = isoToYmd(els.dateEnd.value);
+  if (!Number.isFinite(startY) || !Number.isFinite(endY)) return;
+  let i0 = indexOfYmd(startY);
+  let i1 = indexOfYmd(endY);
+  if (which === "start" && i0 > i1) i1 = i0;
+  if (which === "end" && i1 < i0) i0 = i1;
+  els.start.value = String(i0);
+  els.end.value = String(i1);
+  updateSliderChrome();
+  scheduleRender();
+}
+
 function setupTicks(days) {
+  if (!els.ticks) return;
   const labels = [];
   let lastMonth = 0;
+  const span = Math.max(days.length - 1, 1);
   days.forEach((n, i) => {
     const { m, d } = ymd(n);
     if (m !== lastMonth && (d === 1 || i === 0)) {
-      labels.push({ i, text: MONTHS[m - 1] });
+      labels.push({ i, text: MONTHS[m - 1].slice(0, 3) });
       lastMonth = m;
     }
   });
-  labels.push({ i: days.length - 1, text: formatDay(days[days.length - 1]) });
   els.ticks.replaceChildren(
     ...labels.map((tick) => {
-      const span = document.createElement("span");
-      span.textContent = tick.text;
-      return span;
+      const el = document.createElement("span");
+      el.textContent = tick.text;
+      el.style.left = `${(tick.i / span) * 100}%`;
+      return el;
     }),
   );
 }
 
 els.start.addEventListener("input", () => onRangeInput("start"));
 els.end.addEventListener("input", () => onRangeInput("end"));
+if (els.dateStart) {
+  els.dateStart.addEventListener("input", () => onDateInput("start"));
+  els.dateStart.addEventListener("change", () => onDateInput("start"));
+}
+if (els.dateEnd) {
+  els.dateEnd.addEventListener("input", () => onDateInput("end"));
+  els.dateEnd.addEventListener("change", () => onDateInput("end"));
+}
 els.lowland.addEventListener("change", render);
 if (els.ville) els.ville.addEventListener("change", render);
 if (els.settled) els.settled.addEventListener("change", render);
@@ -4022,6 +4123,7 @@ if (els.showStations) els.showStations.addEventListener("change", render);
 els.horizonNow.addEventListener("click", () => {
   document.body.classList.add("is-horizon-fade");
   horizon = "now";
+  applyHorizonChrome();
   applyHorizonFilters();
   if (els.showStations) els.showStations.checked = false;
   syncViewOptions();
@@ -4035,6 +4137,7 @@ els.horizonNow.addEventListener("click", () => {
 els.horizon2050.addEventListener("click", () => {
   document.body.classList.add("is-horizon-fade");
   horizon = "2050";
+  applyHorizonChrome();
   applyHorizonFilters();
   if (els.showStations) els.showStations.checked = false;
   syncViewOptions();
@@ -4105,7 +4208,7 @@ map.on("zoomend moveend", () => {
 
 let payload;
 try {
-  payload = await fetch("./data/daily.json?v=20260921").then((r) => {
+  payload = await fetch("./data/daily.json?v=20260926").then((r) => {
     if (!r.ok) throw new Error("Impossible de charger daily.json");
     return r.json();
   });
@@ -4123,15 +4226,16 @@ const airesPayload = await fetch("./data/aires.json").then((r) =>
 );
 if (airesPayload?.aires) aires = airesPayload.aires;
 
-data = extendDaysToToday(payload);
+data = extendDaysToYear(payload);
 byStation = new Map(candidates.map((c) => [c.station, c]));
 stationById = new Map(data.stations.map((s) => [s.id, s]));
 const last = lastObservedIndex(data.days);
 els.start.max = String(last);
 els.end.max = String(last);
-els.start.value = "0";
+els.start.value = String(defaultStartIndex(data.days, last));
 els.end.value = String(last);
 setupTicks(data.days.slice(0, last + 1));
+updateSliderChrome();
 setTimeout(loadBasemap, 2000);
 if (els.showStations) els.showStations.checked = false;
 try {

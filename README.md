@@ -14,7 +14,7 @@ Rien n’est inventé côté client : la carte lit des JSON dans `docs/data/`, p
 
 | Indicateur | Source | Détail |
 |---|---|---|
-| Tx, Tn, jours ≥ 30 °C, nuits tropicales, séries chaudes | **Météo-France** | [Données climatologiques de base — quotidiennes](https://www.data.gouv.fr/datasets/donnees-climatologiques-de-base-quotidiennes) (BASE/QUOT RR-T-Vent). Un CSV gzip par département, Licence Ouverte 2.0. **Du 1er juin jusqu’aux dernières mesures disponibles** (pas un JJA figé). |
+| Tx, Tn, jours ≥ 30 °C, nuits tropicales, séries chaudes | **Météo-France** | [Données climatologiques de base — quotidiennes](https://www.data.gouv.fr/datasets/donnees-climatologiques-de-base-quotidiennes) (BASE/QUOT RR-T-Vent). Un CSV gzip par département, Licence Ouverte 2.0. **Du 1er janvier jusqu’aux dernières mesures** ; le slider Entrée / Sortie choisit la fenêtre. |
 | Air (PM2,5, NO₂, ozone) | **CAMS** via [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | Maille ~11 km, pas une station ATMO. Hiver 2025–26 et été 2026. |
 | Aires d’attraction, population | **INSEE** + [geo.api.gouv.fr](https://geo.api.gouv.fr/) | AAV 2020 ; climat au pôle, pas à la couronne. |
 | Hôpital, campus, musée, gare | FINESS, MESR, Musées de France, SNCF | Distances au pôle. |
@@ -33,7 +33,7 @@ Le fond de carte est [OpenStreetMap](https://www.openstreetmap.org/copyright).
 
 ## Relancer les mesures 2026
 
-Les fichiers Météo-France `latest-2025-2026` avancent tout seuls côté producteur. En local, un cache disque évite de tout retélécharger : il faut `--refresh` pour ramener les jours récents, puis réexporter le JSON de la carte. La fin de période n’est plus le 31 août : c’est **aujourd’hui**.
+Les fichiers Météo-France `latest-2025-2026` avancent tout seuls côté producteur. En local, un cache disque évite de tout retélécharger : il faut `--refresh` pour ramener les jours récents, puis réexporter le JSON de la carte. La fenêtre va du **1er janvier** à **aujourd’hui**.
 
 ```bash
 python3 -m pip install -r requirements.txt

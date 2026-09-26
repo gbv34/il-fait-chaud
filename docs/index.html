@@ -11,7 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=cands1" />
+    <link rel="stylesheet" href="./styles.css?v=stay1" />
   </head>
   <body>
     <div id="map"></div>
@@ -48,8 +48,8 @@
     <div class="lexicon" id="lexicon" hidden>
       <p>
         <strong>Aujourd’hui</strong> affiche des <em>mesures</em> Météo-France
-        de l’été en cours : températures, jours ≥ 30&nbsp;°C, nuits
-        tropicales. Ce n’est pas une projection.
+        de l’année en cours : températures, jours ≥ 30&nbsp;°C, nuits
+        tropicales, sur la fenêtre Entrée → Sortie. Ce n’est pas une projection.
       </p>
       <p>
         <strong>2050</strong> est une projection climatique, pas le temps
@@ -84,9 +84,9 @@
         haute de la journée.
         <strong>Min du jour</strong> (Tn) : la plus basse, souvent la nuit.
         Une <strong>nuit tropicale</strong> a un minimum ≥ 20&nbsp;°C.
-        <strong>Aujourd’hui</strong> : depuis le 1er juin, jusqu’aux
-        dernières mesures. En 2050, <strong>été</strong> DRIAS =
-        juin–juillet–août.
+        <strong>Aujourd’hui</strong> : slider Entrée / Sortie sur
+        l’année en cours, jusqu’aux dernières mesures. En 2050,
+        <strong>été</strong> DRIAS = juin–juillet–août.
       </p>
       <p>
         Allemagne, Suisse, Espagne et Italie : projection
@@ -228,7 +228,7 @@
             </button>
           </div>
           <p class="tip" id="criteria-help" hidden>
-            Mesures de l’été en cours : températures, jours ≥ 30 °C, nuits
+            Mesures de la période Entrée → Sortie : températures, jours ≥ 30 °C, nuits
             tropicales. Ce n’est pas une projection.
           </p>
         </div>
@@ -367,6 +367,27 @@
         </div>
       </div>
 
+      <div class="dock-stay" id="stay-range">
+        <label class="stay-date">
+          <span class="dock-label">Entrée</span>
+          <input type="date" id="date-start" />
+        </label>
+        <div class="slider-block">
+          <div class="slider" id="slider">
+            <div class="slider-track" id="slider-track">
+              <div class="slider-range" id="slider-range"></div>
+            </div>
+            <input type="range" id="range-start" min="0" max="1" value="0" />
+            <input type="range" id="range-end" min="0" max="1" value="1" />
+          </div>
+          <div class="slider-ticks" id="slider-ticks"></div>
+        </div>
+        <label class="stay-date">
+          <span class="dock-label">Sortie</span>
+          <input type="date" id="date-end" />
+        </label>
+      </div>
+
       <div class="dock-extra" id="dock-extra" hidden>
         <label class="toggle">
           <input type="checkbox" id="show-stations" />
@@ -384,18 +405,10 @@
           <input type="checkbox" id="settled-only" checked />
           <span>Lieux de vie</span>
         </label>
-        <div class="slider" id="slider">
-          <div class="slider-track" id="slider-track">
-            <div class="slider-range" id="slider-range"></div>
-          </div>
-          <input type="range" id="range-start" min="0" max="1" value="0" />
-          <input type="range" id="range-end" min="0" max="1" value="1" />
-        </div>
-        <div class="slider-ticks" id="slider-ticks"></div>
       </div>
     </footer>
 
     <script src="./vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="./app.js?v=obs-auto"></script>
+    <script type="module" src="./app.js?v=stay1"></script>
   </body>
 </html>
