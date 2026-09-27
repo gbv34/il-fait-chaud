@@ -155,16 +155,11 @@ map.createPane("dots");
 map.getPane("dots").style.zIndex = 550;
 
 const basemap = L.layerGroup({ pane: "basemap" }).addTo(map);
-const tiles = L.tileLayer(
-  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-  {
-    subdomains: "abcd",
-    attribution:
-      "&copy; 2026 Gaspard Bébié-Valérian · tous droits réservés · OpenStreetMap · CARTO · Météo-France",
-    maxZoom: 20,
-    crossOrigin: true,
-  },
-).addTo(map);
+const tiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution:
+    "&copy; 2026 Gaspard Bébié-Valérian · tous droits réservés · OpenStreetMap · Météo-France",
+  maxZoom: 19,
+}).addTo(map);
 const layer = L.layerGroup().addTo(map);
 const markers = new Map();
 const massifMarkers = new Map();
