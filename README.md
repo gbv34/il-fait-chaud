@@ -11,7 +11,7 @@ Ce dépôt n’est **pas** un logiciel libre. Il est publié sous une **licence 
 
 - Le code, l’interface, le classement et les traitements appartiennent à Gaspard Bébié-Valérian.
 - Mettre le site en ligne ne donne **aucun droit** de copier, modifier, forker, redistribuer ou réutiliser le logiciel.
-- Une autorisation écrite est obligatoire pour tout autre usage. Contact : gbebie-valerian@antidot.net
+- Une autorisation écrite est obligatoire pour tout autre usage.
 - Les **données** (Météo-France, DRIAS, CAMS, INSEE, etc.) restent aux licences de leurs producteurs.
 
 Crédits aussi dans l’app (bouton **Crédits**).
