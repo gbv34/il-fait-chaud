@@ -155,10 +155,12 @@ map.createPane("dots");
 map.getPane("dots").style.zIndex = 550;
 
 const basemap = L.layerGroup({ pane: "basemap" }).addTo(map);
-const tiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+const tiles = L.tileLayer("https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", {
+  subdomains: "abc",
   attribution:
     "&copy; 2026 Gaspard Bébié-Valérian · tous droits réservés · OpenStreetMap · Météo-France",
-  maxZoom: 19,
+  maxZoom: 20,
+  crossOrigin: true,
 }).addTo(map);
 const layer = L.layerGroup().addTo(map);
 const markers = new Map();
@@ -3231,28 +3233,61 @@ function withTimeout(promise, ms) {
   ]);
 }
 
+function waitFrames(n = 2) {
+  return new Promise((resolve) => {
+    const step = () => {
+      if (n <= 1) {
+        resolve();
+        return;
+      }
+      n -= 1;
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
 async function captureAppView() {
   if (typeof window.html2canvas !== "function") {
     throw new Error("html2canvas");
   }
-  return window.html2canvas(document.body, {
-    backgroundColor: "#0e0c0a",
-    scale: 1,
-    useCORS: true,
-    allowTaint: false,
-    logging: false,
-    imageTimeout: 2500,
-    foreignObjectRendering: false,
-    ignoreElements: (el) => {
-      const id = el.id;
-      return (
-        id === "share-modal" ||
-        id === "credits" ||
-        id === "lexicon" ||
-        id === "busy"
-      );
-    },
-  });
+  const collapsed = document.body.classList.contains("drawer-collapsed");
+  if (collapsed) {
+    document.body.classList.remove("drawer-collapsed");
+    map.invalidateSize();
+    await waitFrames(2);
+  }
+  const width = Math.max(document.documentElement.clientWidth, window.innerWidth);
+  const height = Math.max(document.documentElement.clientHeight, window.innerHeight);
+  const scale = width >= 1600 ? 1 : Math.min(1.5, 1600 / width);
+  try {
+    return await window.html2canvas(document.documentElement, {
+      backgroundColor: "#0e0c0a",
+      scale,
+      width,
+      height,
+      windowWidth: width,
+      windowHeight: height,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: 0,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      imageTimeout: 4000,
+      foreignObjectRendering: false,
+      ignoreElements: (el) => {
+        const id = el.id;
+        return id === "share-modal" || id === "credits" || id === "lexicon" || id === "busy";
+      },
+    });
+  } finally {
+    if (collapsed) {
+      document.body.classList.add("drawer-collapsed");
+      map.invalidateSize();
+    }
+  }
 }
 
 let shareCardCanvas = null;
@@ -3266,7 +3301,7 @@ async function refreshShareCard() {
     els.sharePreview.removeAttribute("src");
   }
   try {
-    shareCardCanvas = await withTimeout(captureAppView(), 14000);
+    shareCardCanvas = await withTimeout(captureAppView(), 20000);
   } catch (err) {
     console.error(err);
     shareCardCanvas = drawShareCard();

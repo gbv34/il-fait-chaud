@@ -1359,8 +1359,8 @@ body.drawer-collapsed .drawer {
 }
 
 .modal-card.share-card {
-  width: min(920px, 100%);
-  max-height: min(94vh, 860px);
+  width: min(1240px, 96vw);
+  max-height: min(96vh, 980px);
 }
 
 .share-lead {
@@ -1373,8 +1373,8 @@ body.drawer-collapsed .drawer {
 .share-card img {
   display: block;
   width: 100%;
-  min-height: 120px;
-  max-height: min(52vh, 420px);
+  min-height: 180px;
+  max-height: min(72vh, 720px);
   object-fit: contain;
   object-position: top;
   border-radius: 10px;
