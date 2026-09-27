@@ -3233,6 +3233,10 @@ function withTimeout(promise, ms) {
   ]);
 }
 
+const EXPORT_W = 1600;
+const EXPORT_H = 900;
+const EXPORT_DRAWER = 320;
+const EXPORT_TOP = 52;
 const TILE_INVERT =
   "invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.95) saturate(0.35)";
 
@@ -3250,73 +3254,176 @@ function waitFrames(n = 2) {
   });
 }
 
-function stampVisibleTiles(ctx, scale) {
+function loadCorsImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    const timer = setTimeout(() => reject(new Error("tile")), 2500);
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(img);
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("tile"));
+    };
+    img.src = url;
+  });
+}
+
+function mercatorPx(lat, lng, zoom) {
+  const scale = 256 * 2 ** zoom;
+  const sin = Math.sin((lat * Math.PI) / 180);
+  return {
+    x: ((lng + 180) / 360) * scale,
+    y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale,
+  };
+}
+
+function projectExport(lat, lon, mapX, mapY, mapW, mapH, zoom, origin) {
+  const p = mercatorPx(lat, lon, zoom);
+  return { x: mapX + (p.x - origin.x), y: mapY + (p.y - origin.y) };
+}
+
+function drawExportStar(ctx, x, y, fill, size = 11) {
   ctx.save();
-  ctx.filter = TILE_INVERT;
-  for (const img of document.querySelectorAll("img.leaflet-tile")) {
-    if (!img.complete || !img.naturalWidth) continue;
-    const r = img.getBoundingClientRect();
-    if (r.width < 2 || r.height < 2) continue;
-    try {
-      ctx.drawImage(img, r.left * scale, r.top * scale, r.width * scale, r.height * scale);
-    } catch {
-      /* tuile encore privée */
-    }
+  ctx.translate(x, y);
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const r = i % 2 === 0 ? size : size * 0.42;
+    const px = Math.cos(a) * r;
+    const py = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
   }
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 }
 
-async function captureAppView() {
-  if (typeof window.html2canvas !== "function") {
-    throw new Error("html2canvas");
+async function paintExportMap(ctx, mapX, mapY, mapW, mapH) {
+  const zoom = Math.round(map.getZoom());
+  const center = map.getCenter();
+  const origin = {
+    x: mercatorPx(center.lat, center.lng, zoom).x - mapW / 2,
+    y: mercatorPx(center.lat, center.lng, zoom).y - mapH / 2,
+  };
+  const tileSize = 256;
+  const n = 2 ** zoom;
+  const x0 = Math.floor(origin.x / tileSize);
+  const y0 = Math.floor(origin.y / tileSize);
+  const x1 = Math.floor((origin.x + mapW - 1) / tileSize);
+  const y1 = Math.floor((origin.y + mapH - 1) / tileSize);
+  const layer = document.createElement("canvas");
+  layer.width = mapW;
+  layer.height = mapH;
+  const lctx = layer.getContext("2d");
+  const jobs = [];
+  for (let tx = x0; tx <= x1; tx++) {
+    for (let ty = y0; ty <= y1; ty++) {
+      if (ty < 0 || ty >= n) continue;
+      const wx = ((tx % n) + n) % n;
+      const sub = ["a", "b", "c"][Math.abs(wx + ty) % 3];
+      const url = `https://${sub}.tile.openstreetmap.fr/osmfr/${zoom}/${wx}/${ty}.png`;
+      const dx = tx * tileSize - origin.x;
+      const dy = ty * tileSize - origin.y;
+      jobs.push(
+        loadCorsImage(url)
+          .then((img) => lctx.drawImage(img, dx, dy))
+          .catch(() => {}),
+      );
+    }
   }
+  await Promise.all(jobs);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(mapX, mapY, mapW, mapH);
+  ctx.clip();
+  ctx.filter = TILE_INVERT;
+  ctx.drawImage(layer, mapX, mapY);
+  ctx.filter = "none";
+  const fills = currentFills();
+  for (const { s } of lastPainted) {
+    if (!s || !Number.isFinite(s.lat) || !Number.isFinite(s.lon)) continue;
+    const pt = projectExport(s.lat, s.lon, mapX, mapY, mapW, mapH, zoom, origin);
+    if (pt.x < mapX || pt.x > mapX + mapW || pt.y < mapY || pt.y > mapY + mapH) continue;
+    ctx.fillStyle = fills[s.band] || "#e4c27a";
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, s.kind === "massif" ? 4 : 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const home = projectExport(HOME.lat, HOME.lon, mapX, mapY, mapW, mapH, zoom, origin);
+  drawExportStar(ctx, home.x, home.y, "#e4c27a", 11);
+  ctx.restore();
+}
+
+async function shotPanel(el) {
+  if (!el || el.hidden || typeof window.html2canvas !== "function") return null;
+  const r = el.getBoundingClientRect();
+  if (r.width < 2 || r.height < 2) return null;
+  return window.html2canvas(el, {
+    backgroundColor: "#14110e",
+    scale: 1,
+    useCORS: true,
+    allowTaint: false,
+    logging: false,
+    imageTimeout: 1200,
+    foreignObjectRendering: false,
+    ignoreElements: (node) => {
+      const id = node.id;
+      return id === "share-modal" || id === "credits" || id === "lexicon" || id === "busy";
+    },
+  });
+}
+
+function blitPanel(ctx, piece, x, y, w, h) {
+  if (!piece) return;
+  ctx.drawImage(piece, x, y, w, h);
+}
+
+async function captureAppView() {
   const collapsed = document.body.classList.contains("drawer-collapsed");
   document.body.classList.add("is-exporting");
   if (collapsed) {
     document.body.classList.remove("drawer-collapsed");
-    map.invalidateSize();
     await waitFrames(2);
   }
-  const width = Math.max(document.documentElement.clientWidth, window.innerWidth);
-  const height = Math.max(document.documentElement.clientHeight, window.innerHeight);
   try {
-    const ui = await window.html2canvas(document.documentElement, {
-      backgroundColor: null,
-      scale: 1,
-      width,
-      height,
-      windowWidth: width,
-      windowHeight: height,
-      x: 0,
-      y: 0,
-      scrollX: 0,
-      scrollY: 0,
-      useCORS: true,
-      allowTaint: false,
-      logging: false,
-      imageTimeout: 1500,
-      foreignObjectRendering: false,
-      ignoreElements: (el) => {
-        const id = el.id;
-        if (id === "share-modal" || id === "credits" || id === "lexicon" || id === "busy") {
-          return true;
-        }
-        return Boolean(el.classList?.contains("leaflet-tile-pane"));
-      },
-    });
+    const dockEl = document.querySelector(".dock");
+    const dockH = Math.round(
+      Math.min(340, Math.max(220, dockEl?.getBoundingClientRect().height || 260)),
+    );
+    const mapX = 0;
+    const mapY = EXPORT_TOP;
+    const mapW = EXPORT_W - EXPORT_DRAWER;
+    const mapH = EXPORT_H - EXPORT_TOP - dockH;
+    const [topbar, detail, drawer, dock] = await Promise.all([
+      shotPanel(document.querySelector(".topbar")),
+      shotPanel(els.detail),
+      shotPanel(els.drawer),
+      shotPanel(dockEl),
+    ]);
     const out = document.createElement("canvas");
-    out.width = ui.width;
-    out.height = ui.height;
+    out.width = EXPORT_W;
+    out.height = EXPORT_H;
     const ctx = out.getContext("2d");
     ctx.fillStyle = "#0e0c0a";
-    ctx.fillRect(0, 0, out.width, out.height);
-    stampVisibleTiles(ctx, ui.width / width);
-    ctx.drawImage(ui, 0, 0);
+    ctx.fillRect(0, 0, EXPORT_W, EXPORT_H);
+    await paintExportMap(ctx, mapX, mapY, mapW, mapH);
+    blitPanel(ctx, topbar, 0, 0, EXPORT_W, EXPORT_TOP);
+    blitPanel(ctx, drawer, EXPORT_W - EXPORT_DRAWER, EXPORT_TOP, EXPORT_DRAWER, EXPORT_H - EXPORT_TOP);
+    blitPanel(ctx, dock, 0, EXPORT_H - dockH, mapW, dockH);
+    if (detail && els.detail && !els.detail.hidden) {
+      const dw = Math.min(340, detail.width);
+      const dh = Math.min(mapH - 24, detail.height);
+      blitPanel(ctx, detail, 12, EXPORT_TOP + 12, dw, dh);
+    }
     return out;
   } finally {
     document.body.classList.remove("is-exporting");
     if (collapsed) document.body.classList.add("drawer-collapsed");
-    map.invalidateSize();
   }
 }
 
@@ -3331,7 +3438,7 @@ async function refreshShareCard() {
     els.sharePreview.removeAttribute("src");
   }
   try {
-    shareCardCanvas = await withTimeout(captureAppView(), 20000);
+    shareCardCanvas = await withTimeout(captureAppView(), 25000);
   } catch (err) {
     console.error(err);
     shareCardCanvas = drawShareCard();

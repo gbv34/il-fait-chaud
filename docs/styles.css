@@ -94,10 +94,13 @@ html.is-shared body {
   min-height: 900px;
 }
 
-body.is-exporting,
-body.is-exporting #map,
-body.is-exporting .leaflet-container {
-  background: transparent !important;
+body.is-exporting .topbar,
+body.is-exporting .detail,
+body.is-exporting .drawer,
+body.is-exporting .dock {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: #14110e !important;
 }
 
 html.is-shared .detail {
@@ -1376,7 +1379,7 @@ body.drawer-collapsed .drawer {
 }
 
 .modal-card.share-card {
-  width: min(1240px, 96vw);
+  width: min(1320px, 96vw);
   max-height: min(96vh, 980px);
 }
 
@@ -1390,8 +1393,8 @@ body.drawer-collapsed .drawer {
 .share-card img {
   display: block;
   width: 100%;
-  min-height: 180px;
-  max-height: min(72vh, 720px);
+  min-height: 220px;
+  max-height: min(78vh, 780px);
   object-fit: contain;
   object-position: top;
   border-radius: 10px;
