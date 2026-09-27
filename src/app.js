@@ -679,9 +679,10 @@ const els = {
   citySearch: document.getElementById("city-search"),
   cityListHint: document.getElementById("city-list-hint"),
   showStations: document.getElementById("show-stations"),
-  exportLlm: document.getElementById("export-llm"),
   shareBtn: document.getElementById("share-btn"),
-  shareMenu: document.getElementById("share-menu"),
+  shareModal: document.getElementById("share-modal"),
+  sharePreview: document.getElementById("share-preview"),
+  shareLink: document.getElementById("share-link"),
   compareToggle: document.getElementById("compare-toggle"),
   compareClose: document.getElementById("compare-close"),
   compareHint: document.getElementById("compare-hint"),
@@ -3142,13 +3143,15 @@ function snapshotUrl() {
   return `${location.origin}${location.pathname}${location.search}#${q}`;
 }
 
+function selectedShareRow() {
+  if (!selectedId) return null;
+  if (selectedId === HOME.id) return homeRow();
+  return lastPainted.find((p) => p.s.id === selectedId)?.s || rowByShareId(selectedId);
+}
+
 function snapshotMessage() {
-  const place = selectedId
-    ? placeName(
-        lastPainted.find((p) => p.s.id === selectedId)?.s ||
-          (selectedId === HOME.id ? HOME : { name: selectedId }),
-      )
-    : "carte";
+  const row = selectedShareRow();
+  const place = row ? placeName(row) || row.name || "carte" : "carte";
   const lecture =
     horizon === "2050"
       ? els.driasMetric?.selectedOptions?.[0]?.text || "2050"
@@ -3158,9 +3161,79 @@ function snapshotMessage() {
     const [i0, i1] = currentRange();
     span = `${formatDay(data.days[i0])} — ${formatDay(data.days[i1])}`;
   }
+  let figure = "";
+  if (horizon === "now" && currentNowMetric() === "streak35") {
+    figure = (els.heatSeriesSum?.textContent || "").trim();
+  }
+  if (!figure && row) figure = formatObserved(row);
   const title = `Il fait chaud — ${place}`;
-  const text = [title, [lecture, span].filter(Boolean).join(" · ")].join("\n");
-  return { url: snapshotUrl(), title, text };
+  const text = [title, [lecture, span, figure].filter(Boolean).join(" · ")].join("\n");
+  return { url: snapshotUrl(), title, text, place, lecture, span, figure };
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  let line = "";
+  let top = y;
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width > maxWidth && line) {
+      ctx.fillText(line, x, top);
+      line = word;
+      top += lineHeight;
+    } else {
+      line = next;
+    }
+  }
+  if (line) {
+    ctx.fillText(line, x, top);
+    top += lineHeight;
+  }
+  return top;
+}
+
+function drawShareCard() {
+  const { place, lecture, span, figure } = snapshotMessage();
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 720;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#0e0c0a";
+  ctx.fillRect(0, 0, 1080, 720);
+  ctx.fillStyle = "#e4c27a";
+  ctx.fillRect(72, 64, 120, 6);
+  ctx.fillStyle = "#c4b6aa";
+  ctx.font = "500 28px IBM Plex Sans, system-ui, sans-serif";
+  ctx.fillText("Il fait chaud", 72, 140);
+  ctx.fillStyle = "#f3ebe1";
+  ctx.font = "620 72px Fraunces, Georgia, serif";
+  let y = wrapCanvasText(ctx, place, 72, 250, 936, 84);
+  if (figure) {
+    ctx.fillStyle = "#e25b45";
+    ctx.font = "620 48px Fraunces, Georgia, serif";
+    y = wrapCanvasText(ctx, figure, 72, y + 16, 936, 58);
+  }
+  ctx.fillStyle = "#c4b6aa";
+  ctx.font = "500 32px IBM Plex Sans, system-ui, sans-serif";
+  y = wrapCanvasText(ctx, [lecture, span].filter(Boolean).join("  ·  "), 72, y + 28, 936, 44);
+  ctx.fillStyle = "#8a7d72";
+  ctx.font = "400 26px IBM Plex Sans, system-ui, sans-serif";
+  wrapCanvasText(ctx, "Ouvre le lien pour retrouver cette vue.", 72, 640, 936, 36);
+  return canvas;
+}
+
+let shareCardCanvas = null;
+
+function refreshShareCard() {
+  writeSnapshotHash();
+  const snap = snapshotMessage();
+  shareCardCanvas = drawShareCard();
+  if (els.sharePreview) {
+    els.sharePreview.src = shareCardCanvas.toDataURL("image/png");
+    els.sharePreview.alt = snap.title;
+  }
+  if (els.shareLink) els.shareLink.value = snap.url;
+  return snap;
 }
 
 function writeSnapshotHash() {
@@ -3252,18 +3325,60 @@ async function openSharedPlace(id) {
   flyToRow(row);
 }
 
-function setShareMenu(open) {
-  if (!els.shareMenu || !els.shareBtn) return;
-  els.shareMenu.hidden = !open;
-  els.shareBtn.setAttribute("aria-expanded", String(open));
+function setShareOpen(open) {
+  if (!els.shareModal) return;
+  const wasOpen = !els.shareModal.hidden;
+  if (wasOpen === Boolean(open)) return;
+  if (open) {
+    setCreditsOpen(false);
+    if (els.lexicon) els.lexicon.hidden = true;
+    refreshShareCard();
+  }
+  els.shareModal.hidden = !open;
+  els.shareBtn?.classList.toggle("is-on", open);
+  els.shareBtn?.setAttribute("aria-expanded", String(open));
+  if (open) {
+    els.shareModal.querySelector(".modal-close")?.focus();
+  } else {
+    els.shareBtn?.focus();
+  }
+}
+
+function downloadShareImage() {
+  if (!shareCardCanvas) refreshShareCard();
+  shareCardCanvas.toBlob((blob) => {
+    if (!blob) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "il-fait-chaud-vue.png";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+  }, "image/png");
 }
 
 async function shareSnapshot(channel) {
-  const { url, title, text } = snapshotMessage();
-  const body = `${text}\n${url}`;
+  const { url, title, text } = refreshShareCard();
+  const body = `${text}\n\n${url}`;
   try {
+    if (channel === "image") {
+      downloadShareImage();
+      return;
+    }
     if (channel === "native" && navigator.share) {
-      await navigator.share({ title, text, url });
+      const payload = { title, text, url };
+      if (shareCardCanvas && navigator.canShare) {
+        const blob = await new Promise((resolve) => shareCardCanvas.toBlob(resolve, "image/png"));
+        if (blob) {
+          const file = new File([blob], "il-fait-chaud-vue.png", { type: "image/png" });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ ...payload, files: [file] });
+            return;
+          }
+        }
+      }
+      await navigator.share(payload);
       return;
     }
     if (channel === "whatsapp") {
@@ -4530,6 +4645,11 @@ function setCreditsOpen(open) {
   els.creditsToggle?.setAttribute("aria-expanded", String(open));
   if (open) {
     if (els.lexicon) els.lexicon.hidden = true;
+    if (els.shareModal && !els.shareModal.hidden) {
+      els.shareModal.hidden = true;
+      els.shareBtn?.classList.remove("is-on");
+      els.shareBtn?.setAttribute("aria-expanded", "false");
+    }
     els.credits.querySelector(".modal-close")?.focus();
   } else {
     els.creditsToggle?.focus();
@@ -4551,7 +4671,13 @@ if (els.credits) {
   });
 }
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && els.credits && !els.credits.hidden) {
+  if (e.key !== "Escape") return;
+  if (els.shareModal && !els.shareModal.hidden) {
+    e.preventDefault();
+    setShareOpen(false);
+    return;
+  }
+  if (els.credits && !els.credits.hidden) {
     e.preventDefault();
     setCreditsOpen(false);
   }
@@ -4589,21 +4715,22 @@ if (els.selChipClear) {
     syncListSelection();
   });
 }
-if (els.exportLlm) els.exportLlm.title = "Exporter pour un LLM";
-if (els.shareBtn && els.shareMenu) {
-  const native = els.shareMenu.querySelector('[data-share="native"]');
+if (els.shareBtn && els.shareModal) {
+  const native = els.shareModal.querySelector('[data-share="native"]');
   if (native && !navigator.share) native.hidden = true;
-  els.shareBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    setShareMenu(els.shareMenu.hidden);
+  els.shareBtn.addEventListener("click", () => {
+    setShareOpen(els.shareModal.hidden);
   });
-  els.shareMenu.addEventListener("click", (e) => {
+  els.shareLink?.addEventListener("focus", (e) => e.target.select());
+  els.shareModal.addEventListener("click", (e) => {
+    if (e.target.closest("[data-close-modal]")) {
+      setShareOpen(false);
+      return;
+    }
     const btn = e.target.closest("[data-share]");
     if (!btn) return;
     shareSnapshot(btn.dataset.share);
-    setShareMenu(false);
   });
-  document.addEventListener("click", () => setShareMenu(false));
 }
 window.addEventListener("hashchange", async () => {
   const snap = readSnapshot();
@@ -4641,11 +4768,6 @@ els.horizon2050.addEventListener("click", () => {
     refreshMapSize();
   });
 });
-if (els.exportLlm) {
-  els.exportLlm.addEventListener("click", () => {
-    exportLlmBriefing();
-  });
-}
 if (els.compareToggle) {
   els.compareToggle.addEventListener("click", () => {
     if (horizon !== "2050") return;

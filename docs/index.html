@@ -15,7 +15,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=credits1" />
+    <link rel="stylesheet" href="./styles.css?v=share3" />
   </head>
   <body>
     <div id="map"></div>
@@ -187,6 +187,37 @@
           Fond de carte © les contributeurs
           <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>.
         </p>
+      </div>
+    </div>
+
+    <div class="modal" id="share-modal" hidden>
+      <div class="modal-backdrop" data-close-modal></div>
+      <div
+        class="modal-card share-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-title"
+      >
+        <button type="button" class="modal-close" data-close-modal aria-label="Fermer">
+          ×
+        </button>
+        <h2 id="share-title">Envoyer cette vue</h2>
+        <p class="share-lead">
+          Le destinataire ouvre le lien et retrouve le même lieu, la même
+          lecture et les mêmes dates. Tu peux aussi envoyer l’image.
+        </p>
+        <img id="share-preview" alt="" />
+        <label class="share-link-field">
+          <span>Lien</span>
+          <input id="share-link" type="text" readonly />
+        </label>
+        <div class="share-actions">
+          <button type="button" data-share="whatsapp">WhatsApp</button>
+          <button type="button" data-share="mail">Mail</button>
+          <button type="button" data-share="copy">Copier le lien</button>
+          <button type="button" data-share="image">Télécharger l’image</button>
+          <button type="button" data-share="native">Appareil</button>
+        </div>
       </div>
     </div>
 
@@ -394,19 +425,8 @@
           <button type="button" class="export-btn" id="compare-toggle" hidden>
             Comparer
           </button>
-          <div class="share-wrap">
-            <button type="button" class="export-btn" id="share-btn" aria-expanded="false" aria-controls="share-menu">
-              Partager
-            </button>
-            <div class="share-menu" id="share-menu" hidden>
-              <button type="button" data-share="native">Appareil</button>
-              <button type="button" data-share="whatsapp">WhatsApp</button>
-              <button type="button" data-share="mail">Mail</button>
-              <button type="button" data-share="copy">Copier le lien</button>
-            </div>
-          </div>
-          <button type="button" class="export-btn" id="export-llm">
-            Exporter
+          <button type="button" class="export-btn" id="share-btn" aria-expanded="false" aria-controls="share-modal">
+            Partager
           </button>
           <button
             type="button"
@@ -476,6 +496,6 @@
     </footer>
 
     <script src="./vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="./app.min.js?v=credits1"></script>
+    <script type="module" src="./app.min.js?v=share3"></script>
   </body>
 </html>

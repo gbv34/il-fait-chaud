@@ -1358,42 +1358,72 @@ body.drawer-collapsed .drawer {
   color: var(--gold);
 }
 
-.share-wrap {
-  position: relative;
+.modal-card.share-card {
+  width: min(460px, 100%);
+  max-height: min(92vh, 720px);
 }
 
-.share-menu {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 6px);
-  z-index: 40;
+.share-lead {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #5a4e44;
+}
+
+.share-card img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  background: #0e0c0a;
+}
+
+.share-link-field {
   display: flex;
   flex-direction: column;
-  min-width: 11rem;
-  padding: 4px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #1a1613;
-}
-
-.share-menu[hidden] {
-  display: none;
-}
-
-.share-menu button {
-  padding: 7px 10px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: var(--ink);
-  font: inherit;
+  gap: 6px;
+  margin-bottom: 14px;
   font-size: 12px;
-  text-align: left;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5a4e44;
+}
+
+.share-link-field input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(28, 22, 18, 0.14);
+  border-radius: 8px;
+  background: #fff;
+  color: #1c1612;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.share-actions button {
+  padding: 8px 12px;
+  border: 1px solid rgba(28, 22, 18, 0.16);
+  border-radius: 8px;
+  background: #fff;
+  color: #1c1612;
+  font: inherit;
+  font-size: 13px;
   cursor: pointer;
 }
 
-.share-menu button:hover {
-  background: rgba(243, 235, 225, 0.08);
+.share-actions button:hover {
+  border-color: #1c1612;
 }
 
 .compare-top {
