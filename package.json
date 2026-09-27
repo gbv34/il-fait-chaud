@@ -1,0 +1,12 @@
+{
+  "name": "il-fait-chaud",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "protect": "node tools/protect.mjs",
+    "sync": "node tools/protect.mjs --plain"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^5.8.0"
+  }
+}

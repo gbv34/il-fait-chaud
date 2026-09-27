@@ -156,7 +156,8 @@ map.getPane("dots").style.zIndex = 550;
 
 const basemap = L.layerGroup({ pane: "basemap" }).addTo(map);
 const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "&copy; OpenStreetMap · données Météo-France",
+  attribution:
+    "&copy; 2026 Gaspard Bébié-Valérian · tous droits réservés · OpenStreetMap · Météo-France",
   maxZoom: 19,
 }).addTo(map);
 const layer = L.layerGroup().addTo(map);
@@ -632,6 +633,7 @@ const els = {
   stayRange: document.getElementById("stay-range"),
   heatSeries: document.getElementById("heat-series"),
   heatSeriesSum: document.getElementById("heat-series-sum"),
+  heatSeriesTitle: document.getElementById("heat-series-title"),
   heatSeriesPlace: document.getElementById("heat-series-place"),
   heatSeriesTrack: document.getElementById("heat-series-track"),
   heatSeriesAxis: document.getElementById("heat-series-axis"),
@@ -678,6 +680,8 @@ const els = {
   cityListHint: document.getElementById("city-list-hint"),
   showStations: document.getElementById("show-stations"),
   exportLlm: document.getElementById("export-llm"),
+  shareBtn: document.getElementById("share-btn"),
+  shareMenu: document.getElementById("share-menu"),
   compareToggle: document.getElementById("compare-toggle"),
   compareClose: document.getElementById("compare-close"),
   compareHint: document.getElementById("compare-hint"),
@@ -690,6 +694,8 @@ const els = {
   dtAmp: document.getElementById("dt-amp"),
   lexicon: document.getElementById("lexicon"),
   lexiconToggle: document.getElementById("lexicon-toggle"),
+  credits: document.getElementById("credits"),
+  creditsToggle: document.getElementById("credits-toggle"),
   criteria: document.getElementById("criteria"),
   legendBandHelp: document.getElementById("legend-band-help"),
   compare: document.getElementById("compare"),
@@ -733,7 +739,8 @@ let lastPainted = [];
 let compareRows = [];
 let compareOpen = false;
 let compareSeeded = false;
-let timer = null;
+let renderRaf = 0;
+let renderLive = false;
 let horizon = "now";
 let renderGen = 0;
 
@@ -885,9 +892,15 @@ function stationForHeatSeries() {
 
 function setHeatSeriesOpen(open) {
   if (!els.heatSeries) return;
+  const wasOpen = !els.heatSeries.hidden;
   els.heatSeries.hidden = !open;
   document.body.classList.toggle("has-heat-series", open);
-  refreshMapSize();
+  if (wasOpen !== open) refreshMapSize();
+}
+
+function setHeatSeriesHeader(title, sum) {
+  if (els.heatSeriesTitle) els.heatSeriesTitle.textContent = title;
+  if (els.heatSeriesSum) els.heatSeriesSum.textContent = sum;
 }
 
 function renderHeatSeries() {
@@ -907,10 +920,10 @@ function renderHeatSeries() {
   const src = stationForHeatSeries();
   if (!src) {
     setHeatSeriesOpen(true);
+    setHeatSeriesHeader("Séries ≥ 35 °C", "");
     if (els.heatSeriesPlace) {
       els.heatSeriesPlace.textContent = "Clique une ville pour voir ses séries.";
     }
-    if (els.heatSeriesSum) els.heatSeriesSum.textContent = "";
     if (els.heatSeriesAxis) els.heatSeriesAxis.replaceChildren();
     if (els.heatSeriesTrack) els.heatSeriesTrack.replaceChildren();
     if (els.heatSeriesList) els.heatSeriesList.replaceChildren();
@@ -929,11 +942,12 @@ function renderHeatSeries() {
       ? place
       : `${place} · clique une autre ville pour comparer`;
   }
-  if (els.heatSeriesSum) {
-    els.heatSeriesSum.textContent = episodes.length
-      ? `${episodes.length} série${episodes.length > 1 ? "s" : ""} · ${total} j ≥ 35 °C`
-      : "aucune série";
-  }
+  setHeatSeriesHeader(
+    `Séries ≥ 35 °C · ${formatDay(data.days[sel0])} — ${formatDay(data.days[sel1])}`,
+    episodes.length
+      ? `${episodes.length} série${episodes.length > 1 ? "s" : ""} · ${total} j`
+      : "aucune série",
+  );
   const stay = Math.max(sel1 - sel0, 1);
   const year = Math.max(last, 1);
   if (els.heatSeriesAxis) {
@@ -3108,6 +3122,170 @@ function currentRange() {
   return [Math.min(a, b), Math.max(a, b)];
 }
 
+function snapshotParams() {
+  const params = new URLSearchParams();
+  params.set("h", horizon);
+  params.set("m", horizon === "2050" ? currentMetric() : currentNowMetric());
+  if (els.view?.value && els.view.value !== "all") params.set("v", els.view.value);
+  if (horizon === "now" && data?.days?.length) {
+    const [i0, i1] = currentRange();
+    params.set("a", String(data.days[i0]));
+    params.set("b", String(data.days[i1]));
+  }
+  if (selectedId) params.set("id", selectedId);
+  return params;
+}
+
+function snapshotUrl() {
+  const q = snapshotParams().toString();
+  return `${location.origin}${location.pathname}${location.search}#${q}`;
+}
+
+function snapshotMessage() {
+  const place = selectedId
+    ? placeName(
+        lastPainted.find((p) => p.s.id === selectedId)?.s ||
+          (selectedId === HOME.id ? HOME : { name: selectedId }),
+      )
+    : "carte";
+  const lecture =
+    horizon === "2050"
+      ? els.driasMetric?.selectedOptions?.[0]?.text || "2050"
+      : els.nowMetric?.selectedOptions?.[0]?.text || "Aujourd’hui";
+  let span = horizon === "2050" ? "horizon 2050" : "";
+  if (horizon === "now" && data?.days?.length) {
+    const [i0, i1] = currentRange();
+    span = `${formatDay(data.days[i0])} — ${formatDay(data.days[i1])}`;
+  }
+  const title = `Il fait chaud — ${place}`;
+  const text = [title, [lecture, span].filter(Boolean).join(" · ")].join("\n");
+  return { url: snapshotUrl(), title, text };
+}
+
+function writeSnapshotHash() {
+  const next = `#${snapshotParams().toString()}`;
+  if (location.hash === next) return;
+  history.replaceState(null, "", `${location.pathname}${location.search}${next}`);
+}
+
+function readSnapshot() {
+  const raw = location.hash.replace(/^#/, "");
+  if (!raw) return null;
+  const params = new URLSearchParams(raw.includes("=") ? raw : `id=${raw}`);
+  if (![...params.keys()].length) return null;
+  return params;
+}
+
+function applySnapshot(params) {
+  if (!params) return;
+  const h = params.get("h");
+  if (h === "2050" || h === "now") horizon = h;
+  applyHorizonChrome();
+  applyHorizonFilters();
+  syncViewOptions();
+  const view = params.get("v");
+  if (view && els.view && [...els.view.options].some((o) => o.value === view)) {
+    els.view.value = view;
+  }
+  const metric = params.get("m");
+  if (horizon === "2050" && metric && els.driasMetric) {
+    if ([...els.driasMetric.options].some((o) => o.value === metric)) {
+      els.driasMetric.value = metric;
+    }
+  }
+  if (horizon === "now" && metric && els.nowMetric) {
+    if ([...els.nowMetric.options].some((o) => o.value === metric)) {
+      els.nowMetric.value = metric;
+    }
+    if (metric === "streak35") heatSeriesDismissed = false;
+  }
+  if (horizon === "now" && data?.days?.length && els.start) {
+    const last = Number(els.start.max);
+    const a = Number(params.get("a"));
+    const b = Number(params.get("b"));
+    if (Number.isFinite(a) && a > 0) els.start.value = String(indexOfYmd(a));
+    if (Number.isFinite(b) && b > 0) els.end.value = String(Math.min(indexOfYmd(b), last));
+    updateSliderChrome();
+  }
+  selectedId = params.get("id") || selectedId;
+}
+
+function rowByShareId(id) {
+  if (!id) return null;
+  if (id === HOME.id) return homeRow();
+  const painted = lastPainted.find((p) => p.s.id === id)?.s;
+  if (painted) return painted;
+  if (id.startsWith("drias:")) {
+    const [lat, lon] = id.slice(6).split(",").map(Number);
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      const cell = nearestProjAt(lat, lon);
+      if (cell) return { id, lat: cell.lat, lon: cell.lon, name: "maille", kind: "drias" };
+    }
+  }
+  const [i0, i1] = currentRange();
+  const aire = aires.find((a) => a.id === id);
+  if (aire) return horizon === "2050" ? aireRow2050(aire) : aireRowNow(aire, i0, i1);
+  const massif = massifRows().find((m) => m.id === id);
+  if (massif) return massif;
+  const city = neighbors.find((c) => c.id === id);
+  if (city) return neighborRow(city);
+  const st = stationById.get(id);
+  if (st) {
+    const stats = stationStats(st, i0, i1);
+    if (stats) return stats;
+  }
+  return findPlaceRow(id);
+}
+
+async function openSharedPlace(id) {
+  if (!id) return;
+  if (horizon === "2050" && !drias) await ensureDrias();
+  const row = rowByShareId(id);
+  if (!row) return;
+  if (row.kind === "drias") {
+    const cell = nearestDriasCell({ lat: row.lat, lng: row.lon }) || nearestProjAt(row.lat, row.lon);
+    if (cell) showDriasCell(cell);
+    return;
+  }
+  showDetail(row);
+  flyToRow(row);
+}
+
+function setShareMenu(open) {
+  if (!els.shareMenu || !els.shareBtn) return;
+  els.shareMenu.hidden = !open;
+  els.shareBtn.setAttribute("aria-expanded", String(open));
+}
+
+async function shareSnapshot(channel) {
+  const { url, title, text } = snapshotMessage();
+  const body = `${text}\n${url}`;
+  try {
+    if (channel === "native" && navigator.share) {
+      await navigator.share({ title, text, url });
+      return;
+    }
+    if (channel === "whatsapp") {
+      window.open(`https://wa.me/?text=${encodeURIComponent(body)}`, "_blank", "noopener");
+      return;
+    }
+    if (channel === "mail") {
+      location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    if (els.shareBtn) {
+      const prev = els.shareBtn.textContent;
+      els.shareBtn.textContent = "Lien copié";
+      setTimeout(() => {
+        els.shareBtn.textContent = prev;
+      }, 1600);
+    }
+  } catch {
+    /* cancelled */
+  }
+}
+
 function criteriaCount() {
   return document.querySelectorAll("[data-crit]:checked").length;
 }
@@ -3421,10 +3599,13 @@ function applyHorizonChrome() {
   if (els.kicker && els.brandSub) els.kicker.title = els.brandSub.textContent;
 }
 
-async function render() {
+async function render(opts = {}) {
   if (!data) return;
+  const live = opts.live === true;
   const gen = ++renderGen;
-  setBusy(true, horizon === "2050" && !drias ? "Chargement DRIAS…" : "Mise à jour…");
+  if (!live) {
+    setBusy(true, horizon === "2050" && !drias ? "Chargement DRIAS…" : "Mise à jour…");
+  }
   const wantsDrias = els.view.value === "drias" || horizon === "2050";
   if (wantsDrias && !drias) {
     await ensureDrias();
@@ -3592,6 +3773,7 @@ async function render() {
     syncCompareToggle();
   }
   syncFilterCounts();
+  writeSnapshotHash();
   setBusy(false);
 }
 
@@ -3990,6 +4172,8 @@ function buildLlmExport(stamp = exportStamp()) {
   const markdown = [
     `# Briefing — où s’établir dans les 10–20 prochaines années`,
     ``,
+    `© 2026 Gaspard Bébié-Valérian — tous droits réservés. Export personnel, pas de republication.`,
+    ``,
     `Export de l’outil personnel **Il fait chaud** (${date}).`,
     ``,
     `## Consigne pour le LLM`,
@@ -4207,9 +4391,16 @@ async function exportLlmBriefing() {
   }
 }
 
-function scheduleRender() {
-  clearTimeout(timer);
-  timer = setTimeout(render, 40);
+function scheduleRender(live = false) {
+  if (!live) renderLive = false;
+  else if (!renderRaf) renderLive = true;
+  if (renderRaf) return;
+  renderRaf = requestAnimationFrame(() => {
+    renderRaf = 0;
+    const nextLive = renderLive;
+    renderLive = false;
+    render({ live: nextLive });
+  });
 }
 
 function onRangeInput(which) {
@@ -4219,7 +4410,7 @@ function onRangeInput(which) {
   if (which === "end" && b < a) els.start.value = String(b);
   updateSliderChrome();
   renderHeatSeries();
-  scheduleRender();
+  scheduleRender(true);
 }
 
 function onDateInput(which) {
@@ -4235,7 +4426,7 @@ function onDateInput(which) {
   els.end.value = String(i1);
   updateSliderChrome();
   renderHeatSeries();
-  scheduleRender();
+  scheduleRender(true);
 }
 
 function setupTicks(days) {
@@ -4312,9 +4503,21 @@ if (els.citySearch) {
     flyToRow(hit);
   });
 }
+function togglePanel(panel, other) {
+  if (!panel) return;
+  const open = panel.hidden;
+  panel.hidden = !open;
+  if (open && other) other.hidden = true;
+}
+
 els.lexiconToggle.addEventListener("click", () => {
-  els.lexicon.hidden = !els.lexicon.hidden;
+  togglePanel(els.lexicon, els.credits);
 });
+if (els.creditsToggle) {
+  els.creditsToggle.addEventListener("click", () => {
+    togglePanel(els.credits, els.lexicon);
+  });
+}
 if (els.eqTipBtn && els.criteriaHelp) {
   els.eqTipBtn.addEventListener("click", () => {
     const open = els.criteriaHelp.hidden;
@@ -4349,6 +4552,28 @@ if (els.selChipClear) {
   });
 }
 if (els.exportLlm) els.exportLlm.title = "Exporter pour un LLM";
+if (els.shareBtn && els.shareMenu) {
+  const native = els.shareMenu.querySelector('[data-share="native"]');
+  if (native && !navigator.share) native.hidden = true;
+  els.shareBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setShareMenu(els.shareMenu.hidden);
+  });
+  els.shareMenu.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-share]");
+    if (!btn) return;
+    shareSnapshot(btn.dataset.share);
+    setShareMenu(false);
+  });
+  document.addEventListener("click", () => setShareMenu(false));
+}
+window.addEventListener("hashchange", async () => {
+  const snap = readSnapshot();
+  if (!snap) return;
+  applySnapshot(snap);
+  await render();
+  if (snap.get("id")) await openSharedPlace(snap.get("id"));
+});
 if (els.showStations) els.showStations.addEventListener("change", render);
 els.horizonNow.addEventListener("click", () => {
   document.body.classList.add("is-horizon-fade");
@@ -4477,7 +4702,10 @@ try {
 }
 setDockExtra(false);
 syncViewOptions();
-render();
+const incoming = readSnapshot();
+if (incoming) applySnapshot(incoming);
+await render();
+if (incoming?.get("id")) await openSharedPlace(incoming.get("id"));
 
 function attachNeighborAmenities() {
   for (const city of neighbors) {

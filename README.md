@@ -1,10 +1,38 @@
 # Il fait chaud
 
-Carte des villes où l’été reste supportable **aujourd’hui** et en **2050**.
+Carte personnelle des villes où l’été reste supportable **aujourd’hui** et en **2050**.
 
+Auteur : **Gaspard Bébié-Valérian**  
 Site : [gbv34.github.io/il-fait-chaud](https://gbv34.github.io/il-fait-chaud/)
 
-En local : `cd docs && python3 -m http.server 8765` puis http://127.0.0.1:8765/
+## Licence
+
+Ce dépôt n’est **pas** un logiciel libre. Il est publié sous une **licence propriétaire** (`LICENSE`, en anglais).
+
+- Le code, l’interface, le classement et les traitements appartiennent à Gaspard Bébié-Valérian.
+- Mettre le site en ligne ne donne **aucun droit** de copier, modifier, forker, redistribuer ou réutiliser le logiciel.
+- Une autorisation écrite est obligatoire pour tout autre usage. Contact : gbebie-valerian@antidot.net
+- Les **données** (Météo-France, DRIAS, CAMS, INSEE, etc.) restent aux licences de leurs producteurs.
+
+Crédits aussi dans l’app (bouton **Crédits**).
+
+## Partager une vue
+
+Dans l’app, **Partager** envoie un lien (WhatsApp, mail, ou copie) qui rouvre la même configuration : lieu, horizon, lecture, dates Entrée / Sortie. Exemple : Ganges + séries ≥ 35 °C + une période.
+
+## Lancer en local
+
+```bash
+npm install
+npm run protect
+cd docs && python3 -m http.server 8765
+```
+
+Puis http://127.0.0.1:8765/
+
+Le source éditable est `src/app.js`. GitHub Pages ne sert que `docs/app.min.js` (obfusqué). Un site public reste techniquement téléchargeable ; la licence et l’obfuscation en interdisent la réutilisation, elles ne la rendent pas impossible.
+
+`npm run sync` recopie le source sans l’obfusquer, pour tester plus vite.
 
 ## D’où viennent les métriques
 
@@ -40,5 +68,3 @@ python3 -m pip install -r requirements.txt
 python3 scripts/fetch_and_rank_jja.py --refresh
 python3 scripts/export_web_daily.py
 ```
-
-Tous droits réservés. Voir `LICENSE`.

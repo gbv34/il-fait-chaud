@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noarchive, nosnippet, noimageindex" />
+    <meta name="author" content="Gaspard Bébié-Valérian" />
     <title>Il fait chaud — villes supportables aujourd'hui et en 2050</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -11,7 +13,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=streaks3" />
+    <link rel="stylesheet" href="./styles.css?v=share1" />
   </head>
   <body>
     <div id="map"></div>
@@ -39,6 +41,7 @@
           </button>
         </div>
         <button type="button" class="ghost-btn" id="lexicon-toggle">Lexique</button>
+        <button type="button" class="ghost-btn" id="credits-toggle">Crédits</button>
         <button type="button" class="ghost-btn drawer-edge" id="drawer-open" hidden>
           Liste et filtres
         </button>
@@ -145,6 +148,29 @@
         En 2050, l’humidité est estimée à partir des nuits tropicales
         (DRIAS ne la fournit pas). Aujourd’hui, on la calcule avec le max et
         le min du jour. Confortable ≤ 29, encore tenable ≤ 34.
+      </p>
+    </div>
+
+    <div class="lexicon credits" id="credits" hidden>
+      <p>
+        <strong>Il fait chaud</strong> est un outil personnel
+        © 2026 <strong>Gaspard Bébié-Valérian</strong>. Tous droits réservés.
+      </p>
+      <p>
+        Le code, le traitement, le classement et l’interface ne sont
+        <strong>ni libres, ni réutilisables</strong>. Toute copie,
+        republication, extraction ou œuvre dérivée exige une autorisation
+        écrite.
+      </p>
+      <p>
+        Les <strong>données climatiques</strong> restent aux licences de
+        leurs producteurs, pas à cet outil :
+        Météo-France (BASE/QUOT, Licence Ouverte 2.0),
+        DRIAS TRACC-2023 / Explore2,
+        CAMS via Open-Meteo,
+        INSEE, Géorisques, VigiEau.
+        Fond de carte © les contributeurs
+        <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>.
       </p>
     </div>
 
@@ -352,6 +378,17 @@
           <button type="button" class="export-btn" id="compare-toggle" hidden>
             Comparer
           </button>
+          <div class="share-wrap">
+            <button type="button" class="export-btn" id="share-btn" aria-expanded="false" aria-controls="share-menu">
+              Partager
+            </button>
+            <div class="share-menu" id="share-menu" hidden>
+              <button type="button" data-share="native">Appareil</button>
+              <button type="button" data-share="whatsapp">WhatsApp</button>
+              <button type="button" data-share="mail">Mail</button>
+              <button type="button" data-share="copy">Copier le lien</button>
+            </div>
+          </div>
           <button type="button" class="export-btn" id="export-llm">
             Exporter
           </button>
@@ -375,7 +412,7 @@
         <div class="slider-block">
           <div class="heat-series" id="heat-series" hidden>
             <div class="heat-series-head">
-              <p class="dock-label">Séries ≥ 35 °C · 2026</p>
+              <p class="dock-label" id="heat-series-title">Séries ≥ 35 °C</p>
               <p class="heat-series-sum" id="heat-series-sum"></p>
               <button type="button" class="heat-series-close" id="heat-series-close" aria-label="Fermer">
                 ×
@@ -423,6 +460,6 @@
     </footer>
 
     <script src="./vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="./app.js?v=streaks3"></script>
+    <script type="module" src="./app.min.js?v=share1"></script>
   </body>
 </html>

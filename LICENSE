@@ -1,11 +1,74 @@
-Copyright (c) 2026 gbv34
+# PROPRIETARY SOFTWARE LICENSE
 
-Tous droits réservés.
+**Copyright © 2026 Gaspard Bébié-Valérian. All rights reserved.**
 
-Aucune autorisation n’est donnée de copier, modifier, fusionner,
-publier, distribuer, sous-licencier ou vendre tout ou partie de
-ce logiciel, ni d’en créer des œuvres dérivées, sans autorisation
-écrite préalable.
+## 1. Ownership
 
-Les données climatiques (Météo-France, DRIAS, et assimilées)
-restent soumises à leurs licences d’origine (souvent Licence Ouverte).
+This software, including its source code, object code, scripts, configuration files, documentation, user interface, visual elements, and other original materials contained in this repository (collectively, the "Software"), is the exclusive intellectual property of **Gaspard Bébié-Valérian**, except for third-party components expressly identified and licensed separately.
+
+All rights not expressly granted under this License are reserved by the copyright holder.
+
+## 2. No License Granted
+
+The publication of this Software on GitHub or elsewhere does not constitute a grant of any license or other permission to use, reproduce, modify, adapt, translate, distribute, publish, sublicense, sell, rent, lease, or otherwise exploit the Software or any part thereof.
+
+In particular, no permission is granted to:
+
+* copy or reproduce the Software or substantial portions thereof;
+* modify, adapt, translate, or transform the Software;
+* create derivative works based on the Software;
+* redistribute, publish, sublicense, sell, rent, lease, or otherwise make the Software available to third parties;
+* incorporate the Software or any substantial portion of it into another software product or service;
+* use the Software or any substantial portion of it for commercial or non-commercial purposes without prior written authorization;
+* reverse engineer, decompile, disassemble, or otherwise attempt to derive source code from distributed versions of the Software, except where such restriction is prohibited by applicable law.
+
+## 3. Public Demonstration
+
+The Software may be made publicly accessible solely for demonstration, evaluation, or informational purposes.
+
+Public availability does not grant any right to reproduce, modify, distribute, fork, or create derivative works from the Software.
+
+Where the Software is made available through a web interface, the technical copies temporarily created in a user's browser or device solely as necessary to access and operate the publicly available service do not constitute a license to reproduce, modify, redistribute, or otherwise exploit the Software.
+
+## 4. Permission Requests
+
+Any use not expressly permitted by applicable law requires prior written authorization from the copyright holder.
+
+Requests concerning source-code access, licensing, commercial use, redistribution, integration, modification, derivative works, or other forms of use should be addressed to:
+
+**Gaspard Bébié-Valérian**
+**gbebie-valerian@antidot.net**
+
+Permission, if granted, will be subject to separate written terms.
+
+## 5. Third-Party Components
+
+This License applies only to material owned by the copyright holder.
+
+Third-party software, libraries, frameworks, fonts, icons, images, data, or other materials included in or used by the Software remain subject to their respective licenses and terms.
+
+Nothing in this License is intended to restrict rights that are independently granted under applicable third-party licenses or mandatory provisions of applicable law.
+
+Climate and geographic datasets (including Météo-France, DRIAS, CAMS / Open-Meteo, INSEE, Géorisques, VigiEau, and OpenStreetMap) remain subject to their original licenses (often Licence Ouverte or ODbL).
+
+## 6. No Warranty
+
+The Software is provided for demonstration and informational purposes only.
+
+To the maximum extent permitted by applicable law, the Software is provided "as is", without warranties of any kind, whether express or implied.
+
+The copyright holder shall not be liable for any damages arising from access to or use of the Software, except where such exclusion or limitation is prohibited by applicable law.
+
+## 7. Applicable Law and Mandatory Rights
+
+This License is intended to apply internationally and shall be interpreted to the maximum extent permitted by the applicable laws governing the relevant use.
+
+Nothing in this License is intended to exclude, restrict, or waive any right or protection that cannot lawfully be excluded, restricted, or waived under applicable law.
+
+Where mandatory provisions of applicable law provide rights that conflict with this License, those mandatory provisions shall prevail to the extent required.
+
+## 8. Reservation of Rights
+
+Except for rights expressly granted by applicable law or by a separate written authorization from the copyright holder, all rights in and to the Software are reserved.
+
+**No rights are granted by implication, estoppel, exhaustion, or otherwise.**
