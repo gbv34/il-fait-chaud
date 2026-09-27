@@ -3075,6 +3075,7 @@ function showDriasCell(cell) {
 }
 
 function titleCase(name) {
+  if (typeof name !== "string" || !name) return "";
   const small = new Set(["de", "du", "des", "la", "le", "les", "en", "sur", "et"]);
   return name
     .replace(/_SAPC$/i, "")
@@ -3948,19 +3949,29 @@ function cellsNearPlaces(cells, places, maxKm = 16) {
   });
 }
 
+function catalogLabel(s) {
+  if (!s) return "";
+  if (typeof s.n === "string" && s.n) return s.n;
+  if (typeof s.commune === "string" && s.commune) return s.commune;
+  if (typeof s.pole === "string" && s.pole) return s.pole;
+  if (typeof s.name === "string" && s.name) return s.name;
+  return "";
+}
+
 function servicePoleCatalog() {
   const seen = new Set();
   const out = [];
   const add = (s) => {
-    if (!s || !Number.isFinite(s.lat)) return;
-    const key = `${(s.n || s.name || s.commune || "").toLowerCase()}|${s.lat.toFixed(2)}|${s.lon.toFixed(2)}`;
+    if (!s || !Number.isFinite(s.lat) || !Number.isFinite(s.lon)) return;
+    const label = catalogLabel(s);
+    const key = `${label.toLowerCase()}|${s.lat.toFixed(2)}|${s.lon.toFixed(2)}`;
     if (seen.has(key)) return;
     seen.add(key);
     out.push({
-      name: s.n || s.name || s.commune,
+      name: label,
       lat: s.lat,
       lon: s.lon,
-      commune: s.n || s.commune,
+      commune: typeof s.commune === "string" && s.commune ? s.commune : label,
       region: s.reg || s.region,
       cc: s.cc || "FR",
     });
