@@ -7,6 +7,7 @@
     "sync": "node tools/protect.mjs --plain"
   },
   "devDependencies": {
+    "html2canvas": "^1.4.1",
     "javascript-obfuscator": "^5.8.0"
   }
 }

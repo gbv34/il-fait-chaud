@@ -18,7 +18,7 @@ Crédits aussi dans l’app (bouton **Crédits**).
 
 ## Partager une vue
 
-Dans l’app, **Partager** ouvre une vue figée : une image à envoyer, et un lien (WhatsApp, mail, ou copie) qui rouvre exactement la même chose — lieu, lecture, dates Entrée / Sortie. Exemple : Ganges + séries ≥ 35 °C + une période. Ce n’est pas un export pour un LLM.
+Dans l’app, **Partager** capture l’écran actuel (carte, fiche, séries, dates) et un lien (WhatsApp, mail, ou copie) qui rouvre exactement cette vue. Exemple : Ganges + séries ≥ 35 °C + une période. Ce n’est pas un export pour un LLM.
 
 ## Lancer en local
 

@@ -155,11 +155,16 @@ map.createPane("dots");
 map.getPane("dots").style.zIndex = 550;
 
 const basemap = L.layerGroup({ pane: "basemap" }).addTo(map);
-const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution:
-    "&copy; 2026 Gaspard Bébié-Valérian · tous droits réservés · OpenStreetMap · Météo-France",
-  maxZoom: 19,
-}).addTo(map);
+const tiles = L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  {
+    subdomains: "abcd",
+    attribution:
+      "&copy; 2026 Gaspard Bébié-Valérian · tous droits réservés · OpenStreetMap · CARTO · Météo-France",
+    maxZoom: 20,
+    crossOrigin: true,
+  },
+).addTo(map);
 const layer = L.layerGroup().addTo(map);
 const markers = new Map();
 const massifMarkers = new Map();
@@ -3222,17 +3227,59 @@ function drawShareCard() {
   return canvas;
 }
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("timeout")), ms);
+    }),
+  ]);
+}
+
+async function captureAppView() {
+  if (typeof window.html2canvas !== "function") {
+    throw new Error("html2canvas");
+  }
+  return window.html2canvas(document.body, {
+    backgroundColor: "#0e0c0a",
+    scale: 1,
+    useCORS: true,
+    allowTaint: false,
+    logging: false,
+    imageTimeout: 2500,
+    foreignObjectRendering: false,
+    ignoreElements: (el) => {
+      const id = el.id;
+      return (
+        id === "share-modal" ||
+        id === "credits" ||
+        id === "lexicon" ||
+        id === "busy"
+      );
+    },
+  });
+}
+
 let shareCardCanvas = null;
 
-function refreshShareCard() {
+async function refreshShareCard() {
   writeSnapshotHash();
   const snap = snapshotMessage();
-  shareCardCanvas = drawShareCard();
+  if (els.shareLink) els.shareLink.value = snap.url;
   if (els.sharePreview) {
+    els.sharePreview.alt = "Capture…";
+    els.sharePreview.removeAttribute("src");
+  }
+  try {
+    shareCardCanvas = await withTimeout(captureAppView(), 14000);
+  } catch (err) {
+    console.error(err);
+    shareCardCanvas = drawShareCard();
+  }
+  if (els.sharePreview && shareCardCanvas) {
     els.sharePreview.src = shareCardCanvas.toDataURL("image/png");
     els.sharePreview.alt = snap.title;
   }
-  if (els.shareLink) els.shareLink.value = snap.url;
   return snap;
 }
 
@@ -3325,23 +3372,29 @@ async function openSharedPlace(id) {
   flyToRow(row);
 }
 
-function setShareOpen(open) {
+async function setShareOpen(open) {
   if (!els.shareModal) return;
   const wasOpen = !els.shareModal.hidden;
   if (wasOpen === Boolean(open)) return;
   if (open) {
     setCreditsOpen(false);
     if (els.lexicon) els.lexicon.hidden = true;
-    refreshShareCard();
-  }
-  els.shareModal.hidden = !open;
-  els.shareBtn?.classList.toggle("is-on", open);
-  els.shareBtn?.setAttribute("aria-expanded", String(open));
-  if (open) {
+    els.shareBtn?.classList.add("is-on");
+    els.shareBtn?.setAttribute("aria-expanded", "true");
+    if (els.shareBtn) els.shareBtn.disabled = true;
+    try {
+      await refreshShareCard();
+    } finally {
+      if (els.shareBtn) els.shareBtn.disabled = false;
+    }
+    els.shareModal.hidden = false;
     els.shareModal.querySelector(".modal-close")?.focus();
-  } else {
-    els.shareBtn?.focus();
+    return;
   }
+  els.shareModal.hidden = true;
+  els.shareBtn?.classList.remove("is-on");
+  els.shareBtn?.setAttribute("aria-expanded", "false");
+  els.shareBtn?.focus();
 }
 
 function downloadShareImage() {
@@ -3359,7 +3412,7 @@ function downloadShareImage() {
 }
 
 async function shareSnapshot(channel) {
-  const { url, title, text } = refreshShareCard();
+  const { url, title, text } = shareCardCanvas ? snapshotMessage() : await refreshShareCard();
   const body = `${text}\n\n${url}`;
   try {
     if (channel === "image") {
