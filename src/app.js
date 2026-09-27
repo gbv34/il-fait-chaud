@@ -3233,6 +3233,9 @@ function withTimeout(promise, ms) {
   ]);
 }
 
+const TILE_INVERT =
+  "invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.95) saturate(0.35)";
+
 function waitFrames(n = 2) {
   return new Promise((resolve) => {
     const step = () => {
@@ -3247,11 +3250,28 @@ function waitFrames(n = 2) {
   });
 }
 
+function stampVisibleTiles(ctx, scale) {
+  ctx.save();
+  ctx.filter = TILE_INVERT;
+  for (const img of document.querySelectorAll("img.leaflet-tile")) {
+    if (!img.complete || !img.naturalWidth) continue;
+    const r = img.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    try {
+      ctx.drawImage(img, r.left * scale, r.top * scale, r.width * scale, r.height * scale);
+    } catch {
+      /* tuile encore privée */
+    }
+  }
+  ctx.restore();
+}
+
 async function captureAppView() {
   if (typeof window.html2canvas !== "function") {
     throw new Error("html2canvas");
   }
   const collapsed = document.body.classList.contains("drawer-collapsed");
+  document.body.classList.add("is-exporting");
   if (collapsed) {
     document.body.classList.remove("drawer-collapsed");
     map.invalidateSize();
@@ -3259,11 +3279,10 @@ async function captureAppView() {
   }
   const width = Math.max(document.documentElement.clientWidth, window.innerWidth);
   const height = Math.max(document.documentElement.clientHeight, window.innerHeight);
-  const scale = width >= 1600 ? 1 : Math.min(1.5, 1600 / width);
   try {
-    return await window.html2canvas(document.documentElement, {
-      backgroundColor: "#0e0c0a",
-      scale,
+    const ui = await window.html2canvas(document.documentElement, {
+      backgroundColor: null,
+      scale: 1,
       width,
       height,
       windowWidth: width,
@@ -3275,18 +3294,29 @@ async function captureAppView() {
       useCORS: true,
       allowTaint: false,
       logging: false,
-      imageTimeout: 4000,
+      imageTimeout: 1500,
       foreignObjectRendering: false,
       ignoreElements: (el) => {
         const id = el.id;
-        return id === "share-modal" || id === "credits" || id === "lexicon" || id === "busy";
+        if (id === "share-modal" || id === "credits" || id === "lexicon" || id === "busy") {
+          return true;
+        }
+        return Boolean(el.classList?.contains("leaflet-tile-pane"));
       },
     });
+    const out = document.createElement("canvas");
+    out.width = ui.width;
+    out.height = ui.height;
+    const ctx = out.getContext("2d");
+    ctx.fillStyle = "#0e0c0a";
+    ctx.fillRect(0, 0, out.width, out.height);
+    stampVisibleTiles(ctx, ui.width / width);
+    ctx.drawImage(ui, 0, 0);
+    return out;
   } finally {
-    if (collapsed) {
-      document.body.classList.add("drawer-collapsed");
-      map.invalidateSize();
-    }
+    document.body.classList.remove("is-exporting");
+    if (collapsed) document.body.classList.add("drawer-collapsed");
+    map.invalidateSize();
   }
 }
 
@@ -3465,10 +3495,12 @@ async function shareSnapshot(channel) {
       return;
     }
     if (channel === "whatsapp") {
+      downloadShareImage();
       window.open(`https://wa.me/?text=${encodeURIComponent(body)}`, "_blank", "noopener");
       return;
     }
     if (channel === "mail") {
+      downloadShareImage();
       location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
       return;
     }
@@ -4818,6 +4850,7 @@ if (els.shareBtn && els.shareModal) {
 window.addEventListener("hashchange", async () => {
   const snap = readSnapshot();
   if (!snap) return;
+  document.documentElement.classList.add("is-shared");
   applySnapshot(snap);
   await render();
   if (snap.get("id")) await openSharedPlace(snap.get("id"));
@@ -4946,7 +4979,10 @@ try {
 setDockExtra(false);
 syncViewOptions();
 const incoming = readSnapshot();
-if (incoming) applySnapshot(incoming);
+if (incoming) {
+  document.documentElement.classList.add("is-shared");
+  applySnapshot(incoming);
+}
 await render();
 if (incoming?.get("id")) await openSharedPlace(incoming.get("id"));
 

@@ -88,6 +88,23 @@ body.is-horizon-fade #map {
   transition: filter 0.35s ease;
 }
 
+html.is-shared,
+html.is-shared body {
+  min-width: 1440px;
+  min-height: 900px;
+}
+
+body.is-exporting,
+body.is-exporting #map,
+body.is-exporting .leaflet-container {
+  background: transparent !important;
+}
+
+html.is-shared .detail {
+  width: 340px;
+  max-height: 560px;
+}
+
 #map,
 .leaflet-container {
   transition: filter 0.35s ease;
@@ -1751,6 +1768,53 @@ body.drawer-collapsed .drawer {
 }
 
 @media (max-width: 900px) {
+  html.is-shared body,
+  body.is-exporting {
+    --drawer-w: 320px;
+    --status-h: 118px;
+  }
+
+  html.is-shared body.has-heat-series,
+  body.is-exporting.has-heat-series {
+    --status-h: 248px;
+  }
+
+  html.is-shared body.has-heat-series.dock-expanded,
+  body.is-exporting.has-heat-series.dock-expanded {
+    --status-h: 326px;
+  }
+
+  html.is-shared .drawer,
+  body.is-exporting .drawer {
+    width: var(--drawer-w);
+    box-shadow: none;
+  }
+
+  html.is-shared .dock,
+  body.is-exporting .dock {
+    right: var(--drawer-w);
+  }
+
+  html.is-shared .dock-stay,
+  body.is-exporting .dock-stay {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  html.is-shared .dock-stay .slider-block,
+  body.is-exporting .dock-stay .slider-block {
+    grid-column: auto;
+    order: 0;
+  }
+
+  html.is-shared .dock-best,
+  html.is-shared .field-inline .dock-label,
+  html.is-shared .brand-kicker,
+  body.is-exporting .dock-best,
+  body.is-exporting .field-inline .dock-label,
+  body.is-exporting .brand-kicker {
+    display: revert;
+  }
+
   :root {
     --drawer-w: 0px;
     --status-h: 168px;
