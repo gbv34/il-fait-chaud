@@ -15,7 +15,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=export2" />
+    <link rel="stylesheet" href="./styles.css?v=credits1" />
   </head>
   <body>
     <div id="map"></div>
@@ -43,7 +43,9 @@
           </button>
         </div>
         <button type="button" class="ghost-btn" id="lexicon-toggle">Lexique</button>
-        <button type="button" class="ghost-btn" id="credits-toggle">Crédits</button>
+        <button type="button" class="ghost-btn" id="credits-toggle" aria-expanded="false" aria-controls="credits">
+          Crédits
+        </button>
         <button type="button" class="ghost-btn drawer-edge" id="drawer-open" hidden>
           Liste et filtres
         </button>
@@ -153,27 +155,39 @@
       </p>
     </div>
 
-    <div class="lexicon credits" id="credits" hidden>
-      <p>
-        <strong>Il fait chaud</strong> est un outil personnel
-        © 2026 <strong>Gaspard Bébié-Valérian</strong>. Tous droits réservés.
-      </p>
-      <p>
-        Le code, le traitement, le classement et l’interface ne sont
-        <strong>ni libres, ni réutilisables</strong>. Toute copie,
-        republication, extraction ou œuvre dérivée exige une autorisation
-        écrite.
-      </p>
-      <p>
-        Les <strong>données climatiques</strong> restent aux licences de
-        leurs producteurs, pas à cet outil :
-        Météo-France (BASE/QUOT, Licence Ouverte 2.0),
-        DRIAS TRACC-2023 / Explore2,
-        CAMS via Open-Meteo,
-        INSEE, Géorisques, VigiEau.
-        Fond de carte © les contributeurs
-        <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>.
-      </p>
+    <div class="modal" id="credits" hidden>
+      <div class="modal-backdrop" data-close-modal></div>
+      <div
+        class="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="credits-title"
+      >
+        <button type="button" class="modal-close" data-close-modal aria-label="Fermer">
+          ×
+        </button>
+        <h2 id="credits-title">Crédits</h2>
+        <p>
+          <strong>Il fait chaud</strong> est un outil personnel
+          © 2026 <strong>Gaspard Bébié-Valérian</strong>. Tous droits réservés.
+        </p>
+        <p>
+          Le code, le traitement, le classement et l’interface ne sont
+          <strong>ni libres, ni réutilisables</strong>. Toute copie,
+          republication, extraction ou œuvre dérivée exige une autorisation
+          écrite.
+        </p>
+        <p>
+          Les <strong>données climatiques</strong> restent aux licences de
+          leurs producteurs, pas à cet outil :
+          Météo-France (BASE/QUOT, Licence Ouverte 2.0),
+          DRIAS TRACC-2023 / Explore2,
+          CAMS via Open-Meteo,
+          INSEE, Géorisques, VigiEau.
+          Fond de carte © les contributeurs
+          <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>.
+        </p>
+      </div>
     </div>
 
     <aside class="drawer" id="drawer" aria-label="Liste, légende et filtres">
@@ -462,6 +476,6 @@
     </footer>
 
     <script src="./vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="./app.min.js?v=export2"></script>
+    <script type="module" src="./app.min.js?v=credits1"></script>
   </body>
 </html>

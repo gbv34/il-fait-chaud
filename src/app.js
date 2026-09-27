@@ -4521,14 +4521,41 @@ function togglePanel(panel, other) {
   if (open && other) other.hidden = true;
 }
 
+function setCreditsOpen(open) {
+  if (!els.credits) return;
+  const wasOpen = !els.credits.hidden;
+  if (wasOpen === Boolean(open)) return;
+  els.credits.hidden = !open;
+  els.creditsToggle?.classList.toggle("is-on", open);
+  els.creditsToggle?.setAttribute("aria-expanded", String(open));
+  if (open) {
+    if (els.lexicon) els.lexicon.hidden = true;
+    els.credits.querySelector(".modal-close")?.focus();
+  } else {
+    els.creditsToggle?.focus();
+  }
+}
+
 els.lexiconToggle.addEventListener("click", () => {
-  togglePanel(els.lexicon, els.credits);
+  setCreditsOpen(false);
+  togglePanel(els.lexicon, null);
 });
 if (els.creditsToggle) {
   els.creditsToggle.addEventListener("click", () => {
-    togglePanel(els.credits, els.lexicon);
+    setCreditsOpen(els.credits.hidden);
   });
 }
+if (els.credits) {
+  els.credits.addEventListener("click", (e) => {
+    if (e.target.closest("[data-close-modal]")) setCreditsOpen(false);
+  });
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && els.credits && !els.credits.hidden) {
+    e.preventDefault();
+    setCreditsOpen(false);
+  }
+});
 if (els.eqTipBtn && els.criteriaHelp) {
   els.eqTipBtn.addEventListener("click", () => {
     const open = els.criteriaHelp.hidden;
